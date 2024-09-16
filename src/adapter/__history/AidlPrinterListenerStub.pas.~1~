@@ -1,0 +1,7 @@
+unit AidlPrinterListenerStub;
+
+interface
+
+implementation
+
+end.

@@ -1,0 +1,191 @@
+unit DeviceServiceManager_copy;
+
+interface
+
+uses
+  Androidapi.JNIBridge, // Suporte para ponte JNI
+  Androidapi.JNI.JavaTypes, // Tipos Java essenciais como JString, JContext
+  Androidapi.JNI.Os, // Contém JServiceConnection e outros tipos relacionados ao sistema Android
+  Androidapi.Helpers, // Funções auxiliares para conversões entre tipos Delphi e Java
+  System.SysUtils, // Funções e tipos do sistema Delphi
+  Androidapi.Log,
+  Androidapi.JNI.GraphicsContentViewText,
+  sk210.bridge.topwise.cloudpos; // Para realizar logging no Android
+
+type
+  // Classe responsável por gerenciar a conexão com o serviço
+  TMyServiceConnection = class(TJavaLocal, JServiceConnection)
+  private
+    FOnServiceConnected: TProc<JComponentName, JIBinder>; // Mudança para aceitar dois parâmetros
+    FOnServiceDisconnected: TProc;
+  public
+    constructor Create(AOnServiceConnected: TProc<JComponentName, JIBinder>; AOnServiceDisconnected: TProc);
+
+    // Implementação dos métodos da interface JServiceConnection
+    procedure onServiceConnected(name: JComponentName; service: JIBinder); cdecl;
+    procedure onServiceDisconnected(name: JComponentName); cdecl;
+    procedure onBindingDied(name: JComponentName); cdecl;
+    procedure onNullBinding(name: JComponentName); cdecl; // Novo método requerido pelo Android
+  end;
+
+  TDeviceServiceManager = class
+  private
+    FDeviceService: JAidlDeviceService;
+    FIsBind: Boolean;
+    FContext: JContext;
+
+    const
+      ACTION_DEVICE_SERVICE = 'topwise_cloudpos_device_service';
+      DEVICE_SERVICE_CLASS_NAME = 'com.android.topwise.topusdkservice.service.DeviceService';
+      DEVICE_SERVICE_PACKAGE_NAME = 'com.android.topwise.topusdkservice';
+  public
+    class function GetInstance: TDeviceServiceManager;
+    function IsBind: Boolean;
+    function BindDeviceService(AContext: JContext; AOnServiceConnected: TProc): Boolean;
+    procedure UnBindDeviceService;
+    function GetDeviceService: JAidlDeviceService;
+    function GetPrintManager: JAidlPrinter;
+    function GetSystemManager: JAidlSystem;
+    function GetCameraManager: JAidlCameraScanCode;
+  end;
+
+implementation
+
+uses
+  FMX.Dialogs;
+
+var
+  Instance: TDeviceServiceManager;
+
+{ TMyServiceConnection }
+
+constructor TMyServiceConnection.Create(AOnServiceConnected: TProc<JComponentName, JIBinder>; AOnServiceDisconnected: TProc);
+begin
+  inherited Create;
+  FOnServiceConnected := AOnServiceConnected;
+  FOnServiceDisconnected := AOnServiceDisconnected;
+end;
+
+
+procedure TMyServiceConnection.onServiceConnected(name: JComponentName; service: JIBinder); cdecl;
+begin
+  if Assigned(FOnServiceConnected) then
+    FOnServiceConnected(name, service); // Passamos dois parâmetros
+end;
+
+
+procedure TMyServiceConnection.onServiceDisconnected(name: JComponentName); cdecl;
+begin
+  if Assigned(FOnServiceDisconnected) then
+    FOnServiceDisconnected;
+end;
+
+procedure TMyServiceConnection.onBindingDied(name: JComponentName); cdecl;
+begin
+  // Se necessário, adicione um código para lidar com a morte da ligação
+  __android_log_write(ANDROID_LOG_INFO, 'TMyServiceConnection', 'Binding died');
+end;
+
+procedure TMyServiceConnection.onNullBinding(name: JComponentName); cdecl;
+begin
+  // Implementação do onNullBinding, caso a ligação ao serviço seja nula
+  __android_log_write(ANDROID_LOG_INFO, 'TMyServiceConnection', 'Null binding occurred');
+end;
+
+{ TDeviceServiceManager }
+
+function TDeviceServiceManager.BindDeviceService(AContext: JContext; AOnServiceConnected: TProc): Boolean;
+var
+  Intent: JIntent;
+begin
+  Result := False; // inicializamos como false
+
+  // Inicializa o contexto e cria o Intent para o serviço
+  FContext := AContext;
+  Intent := TJIntent.JavaClass.init;
+  Intent.setAction(StringToJString(ACTION_DEVICE_SERVICE));
+  Intent.setClassName(StringToJString(DEVICE_SERVICE_PACKAGE_NAME),
+    StringToJString(DEVICE_SERVICE_CLASS_NAME));
+
+  // Tenta vincular ao serviço
+  ShowMessage('Tentando vincular ao serviço de impressão...');
+
+  // Faz o bind com o serviço utilizando TMyServiceConnection
+  Result := TAndroidHelper.Context.bindService(Intent, TMyServiceConnection.Create(
+    procedure(name: JComponentName; service: JIBinder)
+    begin
+      FDeviceService := TJAidlDeviceService_Stub.JavaClass.asInterface(service); // Convertendo JIBinder para JAidlDeviceService
+
+      if Assigned(FDeviceService) then
+      begin
+        ShowMessage('Serviço vinculado com sucesso.');
+        FIsBind := True;
+
+        // Chama o callback após a vinculação bem-sucedida
+        if Assigned(AOnServiceConnected) then
+          AOnServiceConnected;
+      end
+      else
+        ShowMessage('FDeviceService não foi inicializado.');
+    end,
+    procedure
+    begin
+      ShowMessage('Falha ao vincular o serviço.');
+      FDeviceService := nil;
+      FIsBind := False;
+    end
+  ), TJContext.JavaClass.BIND_AUTO_CREATE);
+end;
+
+
+procedure TDeviceServiceManager.UnBindDeviceService;
+begin
+  // Desfaz o bind com o serviço se estiver conectado
+  if FIsBind then
+  begin
+    FContext.unbindService(TMyServiceConnection.Create(nil, nil));
+    FIsBind := False;
+  end;
+end;
+
+function TDeviceServiceManager.GetDeviceService: JAidlDeviceService;
+begin
+  Result := FDeviceService;
+end;
+
+function TDeviceServiceManager.GetPrintManager: JAidlPrinter;
+begin
+  // Verifica se o serviço de impressão foi obtido
+  if Assigned(FDeviceService) then
+    Result := TJAidlPrinter_Stub.JavaClass.asInterface(FDeviceService.getPrinter)
+  else
+    Result := nil;
+end;
+
+function TDeviceServiceManager.GetSystemManager: JAidlSystem;
+begin
+  if Assigned(FDeviceService) then
+    Result := TJAidlSystem_Stub.JavaClass.asInterface(FDeviceService.getKeyManager); // Ajuste para usar o método correto
+end;
+
+function TDeviceServiceManager.GetCameraManager: JAidlCameraScanCode;
+begin
+  if Assigned(FDeviceService) then
+    Result := TJAidlCameraScanCode_Stub.JavaClass.asInterface(FDeviceService.getCameraManager);
+end;
+
+class function TDeviceServiceManager.GetInstance: TDeviceServiceManager;
+begin
+  // Garante que a classe tenha uma única instância (Singleton)
+  if not Assigned(Instance) then
+    Instance := TDeviceServiceManager.Create;
+  Result := Instance;
+end;
+
+function TDeviceServiceManager.IsBind: Boolean;
+begin
+  Result := FIsBind;
+end;
+
+end.
+

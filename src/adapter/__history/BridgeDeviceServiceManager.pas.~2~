@@ -1,0 +1,285 @@
+unit BridgeDeviceServiceManager;
+
+interface
+
+uses
+  Androidapi.JNIBridge, Androidapi.JNI.JavaTypes, Androidapi.JNI.Os,
+  Androidapi.Helpers, FMX.Helpers.Android, System.SysUtils, Androidapi.Log;
+
+type
+  // Definição manual da interface AidlDeviceService
+  JAidlDeviceService = interface(IJavaInstance)
+    ['{B7A3DBD5-FE21-4ED6-81E2-DA109D9EC2D9}']
+    function getPrinter: JIBinder; cdecl;
+    function getSystemService: JIBinder; cdecl;
+    function getCameraManager: JIBinder; cdecl;
+  end;
+
+  TJAidlDeviceService_Stub = class(TJavaLocal, JAidlDeviceService)
+  public
+    class function asInterface(binder: JIBinder): JAidlDeviceService; cdecl;
+    function getPrinter: JIBinder; cdecl;
+    function getSystemService: JIBinder; cdecl;
+    function getCameraManager: JIBinder; cdecl;
+  end;
+
+  // Definindo a interface AidlPrinterListener
+  JAidlPrinterListener = interface(IJavaInstance)
+    ['{CFE28B60-5C64-4A57-AB7E-8474FFB5D5D2}']
+    procedure onError(errorCode: Integer); cdecl;
+    procedure onPrintFinish; cdecl;
+  end;
+
+  // Classe Stub abstrata, herdando de JBinder e implementando JAidlPrinterListener
+  TJAidlPrinterListener_Stub = class(TJavaLocal, JAidlPrinterListener)
+  public
+    class function asInterface(binder: JIBinder): JAidlPrinterListener; cdecl;
+    function asBinder: JIBinder; cdecl;
+    procedure onError(errorCode: Integer); cdecl;
+    procedure onPrintFinish; cdecl;
+  end;
+
+  // Proxy para simular o comportamento do AidlPrinterListener.Stub.Proxy no Java
+  TJAidlPrinterListener_Stub_Proxy = class(TJavaLocal, JAidlPrinterListener)
+  private
+    FRemote: JIBinder;
+  public
+    constructor Create(remote: JIBinder);
+    function asBinder: JIBinder; cdecl;
+    procedure onError(errorCode: Integer); cdecl;
+    procedure onPrintFinish; cdecl;
+  end;
+
+  // ServiceConnection para gerenciar a conexão com o serviço
+  TMyServiceConnection = class(TJavaLocal, JServiceConnection)
+  private
+    FDeviceService: JAidlDeviceService;
+    FIsBind: Boolean;
+    FOnServiceConnected: TProc;
+    FOnServiceDisconnected: TProc;
+  public
+    constructor Create(AOnServiceConnected, AOnServiceDisconnected: TProc);
+    procedure onServiceConnected(name: JComponentName; service: JIBinder); cdecl;
+    procedure onServiceDisconnected(name: JComponentName); cdecl;
+    property DeviceService: JAidlDeviceService read FDeviceService;
+    property IsBind: Boolean read FIsBind;
+  end;
+
+  // Gerenciador do serviço de dispositivo
+  TDeviceServiceManager = class
+  private
+    FContext: JContext;
+    FServiceConnection: TMyServiceConnection;
+    class var FInstance: TDeviceServiceManager;
+  public
+    class function GetInstance: TDeviceServiceManager;
+    function BindDeviceService(AContext: JContext; AOnServiceConnected, AOnServiceDisconnected: TProc): Boolean;
+    procedure UnbindDeviceService;
+    function GetPrintManager: JAidlPrinter;
+    function GetSystemManager: JAidlSystem;
+    function GetCameraManager: JAidlCameraScanCode;
+    function IsBind: Boolean;
+  end;
+
+implementation
+
+{ TJAidlDeviceService_Stub }
+
+class function TJAidlDeviceService_Stub.asInterface(binder: JIBinder): JAidlDeviceService;
+begin
+  Result := TJObject.Wrap((binder as ILocalObject).GetObjectID) as JAidlDeviceService;
+end;
+
+function TJAidlDeviceService_Stub.getPrinter: JIBinder;
+begin
+  // Implementação que acessa o serviço de impressão (simulada)
+  Result := nil;
+end;
+
+function TJAidlDeviceService_Stub.getSystemService: JIBinder;
+begin
+  // Implementação que acessa o serviço do sistema (simulada)
+  Result := nil;
+end;
+
+function TJAidlDeviceService_Stub.getCameraManager: JIBinder;
+begin
+  // Implementação que acessa o serviço da câmera (simulada)
+  Result := nil;
+end;
+
+{ TJAidlPrinterListener_Stub }
+
+class function TJAidlPrinterListener_Stub.asInterface(binder: JIBinder): JAidlPrinterListener;
+var
+  iin: IInterface;
+begin
+  if binder = nil then
+    Exit(nil);
+
+  iin := binder.queryLocalInterface(StringToJString('com.topwise.cloudpos.aidl.printer.AidlPrinterListener'));
+
+  if (iin <> nil) and Supports(iin, JAidlPrinterListener) then
+    Result := iin as JAidlPrinterListener
+  else
+    Result := TJAidlPrinterListener_Stub_Proxy.Create(binder) as JAidlPrinterListener;
+end;
+
+function TJAidlPrinterListener_Stub.asBinder: JIBinder;
+begin
+  Result := Self as JIBinder;
+end;
+
+procedure TJAidlPrinterListener_Stub.onError(errorCode: Integer);
+begin
+  // Lógica para tratar o erro durante a impressão
+  ShowMessage('Erro de impressão: ' + IntToStr(errorCode));
+end;
+
+procedure TJAidlPrinterListener_Stub.onPrintFinish;
+begin
+  // Lógica para tratar a conclusão da impressão
+  ShowMessage('Impressão finalizada com sucesso!');
+end;
+
+{ TJAidlPrinterListener_Stub_Proxy }
+
+constructor TJAidlPrinterListener_Stub_Proxy.Create(remote: JIBinder);
+begin
+  inherited Create;
+  FRemote := remote;
+end;
+
+function TJAidlPrinterListener_Stub_Proxy.asBinder: JIBinder;
+begin
+  Result := FRemote;
+end;
+
+procedure TJAidlPrinterListener_Stub_Proxy.onError(errorCode: Integer);
+var
+  _data, _reply: JParcel;
+begin
+  _data := TJParcel.JavaClass.obtain;
+  _reply := TJParcel.JavaClass.obtain;
+  try
+    _data.writeInterfaceToken(StringToJString('com.topwise.cloudpos.aidl.printer.AidlPrinterListener'));
+    _data.writeInt(errorCode);
+    FRemote.transact(1, _data, _reply, 0);
+    _reply.readException;
+  finally
+    _reply.recycle;
+    _data.recycle;
+  end;
+end;
+
+procedure TJAidlPrinterListener_Stub_Proxy.onPrintFinish;
+var
+  _data, _reply: JParcel;
+begin
+  _data := TJParcel.JavaClass.obtain;
+  _reply := TJParcel.JavaClass.obtain;
+  try
+    _data.writeInterfaceToken(StringToJString('com.topwise.cloudpos.aidl.printer.AidlPrinterListener'));
+    FRemote.transact(2, _data, _reply, 0);
+    _reply.readException;
+  finally
+    _reply.recycle;
+    _data.recycle;
+  end;
+end;
+
+{ TMyServiceConnection }
+
+constructor TMyServiceConnection.Create(AOnServiceConnected, AOnServiceDisconnected: TProc);
+begin
+  inherited Create;
+  FOnServiceConnected := AOnServiceConnected;
+  FOnServiceDisconnected := AOnServiceDisconnected;
+end;
+
+procedure TMyServiceConnection.onServiceConnected(name: JComponentName; service: JIBinder);
+begin
+  // Converter o IBinder para AidlDeviceService manualmente
+  FDeviceService := TJAidlDeviceService_Stub.asInterface(service);
+  FIsBind := True;
+
+  if Assigned(FOnServiceConnected) then
+    FOnServiceConnected();
+end;
+
+procedure TMyServiceConnection.onServiceDisconnected(name: JComponentName);
+begin
+  FDeviceService := nil;
+  FIsBind := False;
+
+  if Assigned(FOnServiceDisconnected) then
+    FOnServiceDisconnected();
+end;
+
+{ TDeviceServiceManager }
+
+class function TDeviceServiceManager.GetInstance: TDeviceServiceManager;
+begin
+  if FInstance = nil then
+    FInstance := TDeviceServiceManager.Create;
+  Result := FInstance;
+end;
+
+function TDeviceServiceManager.BindDeviceService(AContext: JContext; AOnServiceConnected, AOnServiceDisconnected: TProc): Boolean;
+var
+  Intent: JIntent;
+begin
+  Result := False;
+
+  FContext := AContext;
+  Intent := TJIntent.JavaClass.init;
+  Intent.setAction(StringToJString('topwise_cloudpos_device_service'));
+  Intent.setClassName(StringToJString('com.android.topwise.topusdkservice'),
+    StringToJString('com.android.topwise.topusdkservice.service.DeviceService'));
+
+  // Criar a conexão de serviço
+  FServiceConnection := TMyServiceConnection.Create(AOnServiceConnected, AOnServiceDisconnected);
+
+  // Vincular ao serviço
+  Result := TAndroidHelper.Context.bindService(Intent, FServiceConnection, TJContext.JavaClass.BIND_AUTO_CREATE);
+end;
+
+procedure TDeviceServiceManager.UnbindDeviceService;
+begin
+  if FServiceConnection.IsBind then
+  begin
+    FContext.unbindService(FServiceConnection);
+  end;
+end;
+
+function TDeviceServiceManager.GetPrintManager: JAidlPrinter;
+begin
+  if Assigned(FServiceConnection) and Assigned(FServiceConnection.DeviceService) then
+    Result := TJAidlPrinter_Stub.asInterface(FServiceConnection.DeviceService.getPrinter)
+  else
+    Result := nil;
+end;
+
+function TDeviceServiceManager.GetSystemManager: JAidlSystem;
+begin
+  if Assigned(FServiceConnection) and Assigned(FServiceConnection.DeviceService) then
+    Result := TJAidlSystem_Stub.asInterface(FServiceConnection.DeviceService.getSystemService)
+  else
+    Result := nil;
+end;
+
+function TDeviceServiceManager.GetCameraManager: JAidlCameraScanCode;
+begin
+  if Assigned(FServiceConnection) and Assigned(FServiceConnection.DeviceService) then
+    Result := TJAidlCameraScanCode_Stub.asInterface(FServiceConnection.DeviceService.getCameraManager)
+  else
+    Result := nil;
+end;
+
+function TDeviceServiceManager.IsBind: Boolean;
+begin
+  Result := FServiceConnection.IsBind;
+end;
+
+end.
+

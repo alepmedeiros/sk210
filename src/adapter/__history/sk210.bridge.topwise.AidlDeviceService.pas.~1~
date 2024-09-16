@@ -1,0 +1,71 @@
+unit sk210.bridge.topwise.AidlDeviceService;
+
+interface
+
+uses
+  Androidapi.JNIBridge,
+  Androidapi.JNI.Os;
+
+type
+// ===== Forward declarations =====
+
+  JAidlDeviceService = interface;//com.topwise.cloudpos.aidl.AidlDeviceService
+
+// ===== Interface declarations =====
+
+  JAidlDeviceServiceClass = interface(JIInterfaceClass)
+    ['{BB4A9B5F-EDC6-461B-8061-5C3F3637ED4F}']
+    {class} function getCPUCard: JIBinder; cdecl;
+    {class} function getDecoder: JIBinder; cdecl;
+    {class} function getFingerprint: JIBinder; cdecl;
+    {class} function getMagCardReader: JIBinder; cdecl;
+    {class} function getPSAMReader(i: Integer): JIBinder; cdecl;
+    {class} function getSystemService: JIBinder; cdecl;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/AidlDeviceService')]
+  JAidlDeviceService = interface(JIInterface)
+    ['{3DEA75AB-F031-4D60-B08E-0B333A82BE0E}']
+    function expandFunction(bundle: JBundle): JBundle; cdecl;
+    function getBuzzer: JIBinder; cdecl;
+    function getCameraManager: JIBinder; cdecl;
+    function getCheckCard: JIBinder; cdecl;
+    function getInsertCardReader: JIBinder; cdecl;
+    function getKLD: JIBinder; cdecl;
+    function getKeyManager: JIBinder; cdecl;
+    function getL2Amex: JIBinder; cdecl;
+    function getL2Dpas: JIBinder; cdecl;
+    function getL2Emv: JIBinder; cdecl;
+    function getL2Entry: JIBinder; cdecl;
+    function getL2JCB: JIBinder; cdecl;
+    function getL2Mir: JIBinder; cdecl;
+    function getL2Paypass: JIBinder; cdecl;
+    function getL2Paywave: JIBinder; cdecl;
+    function getL2Pure: JIBinder; cdecl;
+    function getL2Qpboc: JIBinder; cdecl;
+    function getL2Rupay: JIBinder; cdecl;
+    function getLed: JIBinder; cdecl;
+    function getPM: JIBinder; cdecl;
+    function getPedestal: JIBinder; cdecl;
+    function getPinPad(i: Integer): JIBinder; cdecl;
+    function getPosTriggerStatus: JIBinder; cdecl;
+    function getPrinter: JIBinder; cdecl;
+    function getRFIDReader: JIBinder; cdecl;
+    function getScanner: JIBinder; cdecl;
+    function getSerialPort(i: Integer): JIBinder; cdecl;
+    function getShellMonitor: JIBinder; cdecl;
+    function getTM: JIBinder; cdecl;
+  end;
+  TJAidlDeviceService = class(TJavaGenericImport<JAidlDeviceServiceClass, JAidlDeviceService>) end;
+
+implementation
+
+procedure RegisterTypes;
+begin
+  TRegTypes.RegisterType('C:\temp\teste.pas.JAidlDeviceService', TypeInfo(C:\temp\teste.pas.JAidlDeviceService));
+end;
+
+initialization
+  RegisterTypes;
+end.
+

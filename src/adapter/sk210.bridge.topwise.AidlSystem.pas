@@ -1,0 +1,301 @@
+
+unit sk210.bridge.topwise.AidlSystem;
+
+interface
+
+uses
+  Androidapi.JNIBridge,
+  Androidapi.JNI.GraphicsContentViewText,
+  Androidapi.JNI.JavaTypes,
+  Androidapi.JNI.Os;
+
+type
+// ===== Forward declarations =====
+
+  JAidlPosKeyListener = interface;//com.topwise.cloudpos.aidl.system.AidlPosKeyListener
+  JAidlSystem = interface;//com.topwise.cloudpos.aidl.system.AidlSystem
+  JApnInfoExt = interface;//com.topwise.cloudpos.aidl.system.ApnInfoExt
+  JInstallAppObserver = interface;//com.topwise.cloudpos.aidl.system.InstallAppObserver
+  JUninstallAppObserver = interface;//com.topwise.cloudpos.aidl.system.UninstallAppObserver
+
+// ===== Interface declarations =====
+
+  JAidlPosKeyListenerClass = interface(JIInterfaceClass)
+    ['{64B71C2D-1E9A-4EB1-A89F-90E4939DC2BB}']
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/system/AidlPosKeyListener')]
+  JAidlPosKeyListener = interface(JIInterface)
+    ['{A01DD566-1156-42C6-BEE4-099A54439F48}']
+    procedure dispatchKeyEvent(keyEvent: JKeyEvent); cdecl;
+  end;
+  TJAidlPosKeyListener = class(TJavaGenericImport<JAidlPosKeyListenerClass, JAidlPosKeyListener>) end;
+
+  JAidlSystemClass = interface(JIInterfaceClass)
+    ['{0D935275-B357-44EE-8EC1-6ECA0B8DE575}']
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/system/AidlSystem')]
+  JAidlSystem = interface(JIInterface)
+    ['{72E556C3-671A-47C7-A135-AD1DF8B56AAC}']
+    function SystemPropertiesGet(string_: JString; string_1: JString): JString; cdecl;
+    procedure SystemPropertiesSet(string_: JString; string_1: JString); cdecl;
+    procedure adbEnable(b: Boolean); cdecl;
+    function adbLogEnabled(b: Boolean): Integer; cdecl;
+    function apnGetConnectedId: JString; cdecl;
+    procedure apnRestore; cdecl;
+    procedure apnSet(contentValues: JContentValues); cdecl;
+    function apnUpdate(string_: JString; contentValues: JContentValues): Integer; cdecl;
+    procedure appErrorDialogEnabled(b: Boolean); cdecl;
+    procedure appPermissionEnabled(string_: JString; b: Boolean); cdecl;
+    procedure autoCheckCard(b: Boolean); cdecl;
+    procedure autoTimeZoneEnable(b: Boolean); cdecl;
+    procedure batteryPercentEnabled(b: Boolean); cdecl;
+    procedure bootAnimationSet(string_: JString); cdecl;
+    procedure caNotificationEnable(b: Boolean); cdecl;
+    function checkStatus(i: TJavaArray<Integer>; i1: TJavaArray<Integer>): Boolean; cdecl;
+    procedure clearLastPressPhysicalKey; cdecl;
+    procedure clearSdcard; cdecl;
+    procedure clearUserData(string_: TJavaObjectArray<JString>); cdecl;
+    function configLongpressPhysicalKeyAction(i: Integer; i1: Integer): Integer; cdecl;
+    procedure daydreamActiveSet(string_: JString); cdecl;
+    procedure daydreamEnable(b: Boolean); cdecl;
+    procedure daydreamModeSet(i: Integer); cdecl;
+    function deleteAPN(string_: JString): Boolean; cdecl;
+    procedure doubleTapButtonActionSet(i: Integer; i1: Integer); cdecl;
+    function enableBackButton(b: Boolean): Boolean; cdecl;
+    function enableDropDownMenu(b: Boolean): Boolean; cdecl;
+    function enableHomeButton(b: Boolean): Boolean; cdecl;
+    function enableMobileDataAlwaysOn(b: Boolean): Boolean; cdecl;
+    function enablePhysicalKeyboardBacklight(b: Boolean): Integer; cdecl;
+    function enablePowerButton(b: Boolean): Boolean; cdecl;
+    function enablePressPhysicalKeySound(b: Boolean): Integer; cdecl;
+    function enableRecentAppButton(b: Boolean): Boolean; cdecl;
+    function enableWifi(b: Boolean): Boolean; cdecl;
+    function enableWifiPassWord(b: Boolean): Boolean; cdecl;
+    procedure enabledApp(string_: JString; b: Boolean); cdecl;
+    procedure enabledAppPowerSave(string_: JString; b: Boolean); cdecl;
+    procedure enabledCameraDoubleTapPower(b: Boolean); cdecl;
+    procedure enabledDonotDisturbMode(b: Boolean); cdecl;
+    procedure enabledRescueParty(b: Boolean); cdecl;
+    procedure factoryTestAppEnable(b: Boolean); cdecl;
+    procedure fileManagerEnable(b: Boolean); cdecl;
+    procedure forgetAllWiFi; cdecl;
+    function get24HourRebootTime: JString; cdecl;
+    function getAPNList: JList; cdecl;
+    function getAPNListExt: JList; cdecl;
+    function getAndroidKernelVersion: JString; cdecl;
+    function getAndroidOsVersion: JString; cdecl;
+    function getBatteryLevel: Single; cdecl;
+    function getBatteryUsage(string_: JString): Single; cdecl;
+    function getCameraDisabled(componentName: JComponentName): Boolean; cdecl;
+    function getCurSdkVersion: JString; cdecl;
+    function getCustomerSN: JString; cdecl;
+    function getDisplayDensityDpi: Integer; cdecl;
+    function getDriverVersion: JString; cdecl;
+    function getHardWireVersion: JString; cdecl;
+    function getICCID: JString; cdecl;
+    function getICCIDExt(i: Integer): JString; cdecl;
+    function getIMEI: JString; cdecl;
+    function getIMEIExt(i: Integer): JString; cdecl;
+    function getIMSI: JString; cdecl;
+    function getIMSIExt(i: Integer): JString; cdecl;
+    function getKsn: JString; cdecl;
+    function getLKLOSSpecsVersion: JString; cdecl;
+    function getLastPressPhysicalKey: Integer; cdecl;
+    function getManufacture: JString; cdecl;
+    function getModel: JString; cdecl;
+    function getPinServiceVersion: JString; cdecl;
+    function getProcStat: JString; cdecl;
+    function getRomVersion: JString; cdecl;
+    function getSecurityDriverVersion: JString; cdecl;
+    function getSerialNo: JString; cdecl;
+    function getStoragePath: JString; cdecl;
+    function getUpdateFirmwareState(string_: JString): Integer; cdecl;
+    procedure installApp(string_: JString; installAppObserver: JInstallAppObserver); cdecl;
+    function installCACertificate(i: Integer; string_: JString): JString; cdecl;
+    function isMobileDataEnabled: Boolean; cdecl;
+    procedure isShowNvBar(b: Boolean); cdecl;
+    procedure locationEnable(b: Boolean); cdecl;
+    procedure longTapButtonActionSet(i: Integer; i1: Integer); cdecl;
+    procedure passwordSet(string_: JString); cdecl;
+    procedure preferredTTSEngineSet(string_: JString); cdecl;
+    procedure reboot; cdecl;
+    procedure rebootModem; cdecl;
+    procedure removeAllWIFIInfo; cdecl;
+    procedure screenBrightnessSet(i: Integer); cdecl;
+    procedure screenTimeOutSet(i: Integer); cdecl;
+    function selectAPN(string_: JString): Boolean; cdecl;
+    procedure set24HourRebootTime(i: Integer; i1: Integer); cdecl;
+    function setAPN(string_: JString; string_1: JString; string_2: JString; string_3: JString): Boolean; cdecl;
+    function setAPNExt(apnInfoExt: JApnInfoExt): Integer; cdecl;
+    procedure setAdbMode(i: Integer); cdecl;
+    procedure setAirplaneMode(b: Boolean); cdecl;
+    procedure setBootLogo(string_: JString); cdecl;
+    procedure setCameraDisabled(b: Boolean); cdecl;
+    procedure setCleanKeyBehavior(b: Boolean); cdecl;
+    function setCustomerSN(string_: JString): Integer; cdecl;
+    procedure setDefaultSimCardForCellularData(i: Integer); cdecl;
+    procedure setDeviceSerialNumber(string_: JString); cdecl;
+    procedure setDisplayDensityDpi(i: Integer); cdecl;
+    procedure setLockScreenCameraVisibility(b: Boolean); cdecl;
+    procedure setMobileDataEnabled(b: Boolean); cdecl;
+    procedure setPhysicalKeySoundDuration(i: Integer); cdecl;
+    procedure setPhysicalKeySoundFrequency(i: Integer); cdecl;
+    procedure setPosKeyListener(aidlPosKeyListener: JAidlPosKeyListener); cdecl;
+    function setPrivateAdbKey(string_: JString): Integer; cdecl;
+    procedure setProvidedTime(i: Integer); cdecl;
+    procedure setScreenLock(i: Integer); cdecl;
+    function setTamperScreen(string_: JString): Boolean; cdecl;
+    procedure setTethering(i: Integer; b: Boolean); cdecl;
+    procedure setTimeZone(string_: JString); cdecl;
+    procedure showAppIconInLauncher3(string_: JString; b: Boolean); cdecl;
+    procedure showClockInStatusbarRight(b: Boolean); cdecl;
+    procedure shutDownDevice; cdecl;
+    function simCardEnabled(i: Integer; b: Boolean): Integer; cdecl;
+    procedure systemConfigurationMenuVisibilitySet(i: Integer; b: Boolean); cdecl;
+    function systemReset(string_: JString; i: Integer): Integer; cdecl;
+    function talkbackEnable(b: Boolean): Integer; cdecl;
+    procedure uninstallApp(string_: JString; uninstallAppObserver: JUninstallAppObserver); cdecl;
+    procedure uninstallCustomerCACertificate(i: Integer; string_: JString); cdecl;
+    procedure update(i: Integer); cdecl;
+    function updateFirmware(i: Integer; string_: JString): JString; cdecl;
+    function updateFirmwareSP(string_: JString): Integer; cdecl;
+    function updateSysTime(string_: JString): Boolean; cdecl;
+    procedure ussdMessagesEnabled(b: Boolean); cdecl;
+  end;
+  TJAidlSystem = class(TJavaGenericImport<JAidlSystemClass, JAidlSystem>) end;
+
+  JApnInfoExtClass = interface(JParcelableClass)
+    ['{354498B5-DE8C-4445-A60D-451381EF17FD}']
+    {class} function _GetCREATOR: JParcelable_Creator; cdecl;
+    {class} function init: JApnInfoExt; cdecl; overload;
+    {class} property CREATOR: JParcelable_Creator read _GetCREATOR;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/system/ApnInfoExt')]
+  JApnInfoExt = interface(JParcelable)
+    ['{D7E6628D-DD84-489C-A106-4AE7F3C57653}']
+    function coverfromCursor(cursor: JCursor): JApnInfoExt; cdecl;
+    function describeContents: Integer; cdecl;
+    function getApn: JString; cdecl;
+    function getAuthtype: Integer; cdecl;
+    function getBearer: Integer; cdecl;
+    function getContentValue: JContentValues; cdecl;
+    function getCsdnum: JString; cdecl;
+    function getCurrent: Integer; cdecl;
+    function getImsi: JString; cdecl;
+    function getKey: Integer; cdecl;
+    function getMax_conns: Integer; cdecl;
+    function getMax_conns_time: Integer; cdecl;
+    function getMcc: JString; cdecl;
+    function getMmsc: JString; cdecl;
+    function getMmsport: JString; cdecl;
+    function getMmsproxy: JString; cdecl;
+    function getMnc: JString; cdecl;
+    function getMtu: Integer; cdecl;
+    function getMvno_match_data: JString; cdecl;
+    function getMvno_type: JString; cdecl;
+    function getName: JString; cdecl;
+    function getNapid: JString; cdecl;
+    function getOmacpid: JString; cdecl;
+    function getPassword: JString; cdecl;
+    function getPnn: JString; cdecl;
+    function getPort: JString; cdecl;
+    function getPpp: JString; cdecl;
+    function getProfile_id: Integer; cdecl;
+    function getProtocol: JString; cdecl;
+    function getProxy: JString; cdecl;
+    function getProxyid: JString; cdecl;
+    function getRoaming_protocol: JString; cdecl;
+    function getServer: JString; cdecl;
+    function getSourcetype: Integer; cdecl;
+    function getSpn: JString; cdecl;
+    function getSub_id: Integer; cdecl;
+    function getType: JString; cdecl;
+    function getUser: JString; cdecl;
+    function getWait_time: Integer; cdecl;
+    function isCarrier_enabled: Boolean; cdecl;
+    function isModem_cognitive: Boolean; cdecl;
+    procedure setApn(string_: JString); cdecl;
+    procedure setAuthtype(i: Integer); cdecl;
+    procedure setBearer(i: Integer); cdecl;
+    procedure setCarrier_enabled(b: Boolean); cdecl;
+    procedure setCsdnum(string_: JString); cdecl;
+    procedure setCurrent(i: Integer); cdecl;
+    procedure setImsi(string_: JString); cdecl;
+    procedure setKey(i: Integer); cdecl;
+    procedure setMax_conns(i: Integer); cdecl;
+    procedure setMax_conns_time(i: Integer); cdecl;
+    procedure setMcc(string_: JString); cdecl;
+    procedure setMmsc(string_: JString); cdecl;
+    procedure setMmsport(string_: JString); cdecl;
+    procedure setMmsproxy(string_: JString); cdecl;
+    procedure setMnc(string_: JString); cdecl;
+    procedure setModem_cognitive(b: Boolean); cdecl;
+    procedure setMtu(i: Integer); cdecl;
+    procedure setMvno_match_data(string_: JString); cdecl;
+    procedure setMvno_type(string_: JString); cdecl;
+    procedure setName(string_: JString); cdecl;
+    procedure setNapid(string_: JString); cdecl;
+    procedure setOmacpid(string_: JString); cdecl;
+    procedure setPassword(string_: JString); cdecl;
+    procedure setPnn(string_: JString); cdecl;
+    procedure setPort(string_: JString); cdecl;
+    procedure setPpp(string_: JString); cdecl;
+    procedure setProfile_id(i: Integer); cdecl;
+    procedure setProtocol(string_: JString); cdecl;
+    procedure setProxy(string_: JString); cdecl;
+    procedure setProxyid(string_: JString); cdecl;
+    procedure setRoaming_protocol(string_: JString); cdecl;
+    procedure setServer(string_: JString); cdecl;
+    procedure setSourcetype(i: Integer); cdecl;
+    procedure setSpn(string_: JString); cdecl;
+    procedure setSub_id(i: Integer); cdecl;
+    procedure setType(string_: JString); cdecl;
+    procedure setUser(string_: JString); cdecl;
+    procedure setWait_time(i: Integer); cdecl;
+    function toString: JString; cdecl;
+    procedure writeToParcel(parcel: JParcel; i: Integer); cdecl;
+  end;
+  TJApnInfoExt = class(TJavaGenericImport<JApnInfoExtClass, JApnInfoExt>) end;
+
+  JInstallAppObserverClass = interface(JIInterfaceClass)
+    ['{FC2F53CF-44EE-4E9F-B832-ECC17D0493BB}']
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/system/InstallAppObserver')]
+  JInstallAppObserver = interface(JIInterface)
+    ['{42A33CB7-5759-4089-9E1F-C04F9AABA134}']
+    procedure onInstallError(i: Integer); cdecl;
+    procedure onInstallFinished; cdecl;
+  end;
+  TJInstallAppObserver = class(TJavaGenericImport<JInstallAppObserverClass, JInstallAppObserver>) end;
+
+  JUninstallAppObserverClass = interface(JIInterfaceClass)
+    ['{7CD14F3B-A46B-40D0-85B4-270053DAE3E0}']
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/system/UninstallAppObserver')]
+  JUninstallAppObserver = interface(JIInterface)
+    ['{D3C29282-45FF-4C66-8451-0551BC6D948E}']
+    procedure onUninstallError(i: Integer); cdecl;
+    procedure onUninstallFinished; cdecl;
+  end;
+  TJUninstallAppObserver = class(TJavaGenericImport<JUninstallAppObserverClass, JUninstallAppObserver>) end;
+
+implementation
+
+procedure RegisterTypes;
+begin
+  TRegTypes.RegisterType('sk210.bridge.topwise.AidlSystem.JAidlPosKeyListener', TypeInfo(sk210.bridge.topwise.AidlSystem.JAidlPosKeyListener));
+  TRegTypes.RegisterType('sk210.bridge.topwise.AidlSystem.JAidlSystem', TypeInfo(sk210.bridge.topwise.AidlSystem.JAidlSystem));
+  TRegTypes.RegisterType('sk210.bridge.topwise.AidlSystem.JApnInfoExt', TypeInfo(sk210.bridge.topwise.AidlSystem.JApnInfoExt));
+  TRegTypes.RegisterType('sk210.bridge.topwise.AidlSystem.JInstallAppObserver', TypeInfo(sk210.bridge.topwise.AidlSystem.JInstallAppObserver));
+  TRegTypes.RegisterType('sk210.bridge.topwise.AidlSystem.JUninstallAppObserver', TypeInfo(sk210.bridge.topwise.AidlSystem.JUninstallAppObserver));
+end;
+
+initialization
+  RegisterTypes;
+end.
+

@@ -1,0 +1,456 @@
+unit ImpressoraManager;
+
+interface
+
+uses
+  Androidapi.JNI.JavaTypes,
+  Androidapi.Helpers,
+  FMX.Dialogs,
+  DeviceServiceManager_outracopia,
+  sk210.bridge.topwise.cloudpos,
+  Androidapi.JNI.GraphicsContentViewText, Androidapi.JNIBridge,
+  Androidapi.JNI.Os;
+
+type
+  // Gerenciador de impressora sem callbacks
+  TImpressoraManager = class
+  private
+    FContext: JContext;
+    FDeviceServiceManager: TDeviceServiceManager;
+    FPrinterService: JAidlPrinter;
+    procedure VerificarServicoDeImpressao;
+  public
+    constructor Create(AContext: JContext;
+      ADeviceServiceManager: TDeviceServiceManager);
+    procedure ImprimirTexto(const ATexto: string);
+    procedure ImprimirTextoDireto(const ATexto: string);
+    procedure ImprimirVazio;
+    procedure ImprimirQr(const ATexto: String);
+    procedure InicializarImpressora;
+    procedure AdicionarTexto(const ATexto: string);
+    procedure ImprimirFila;
+    procedure ImprimirComReset(const ATexto: string);
+  end;
+
+  TPrinterListener = class(TJavaLocal, JAidlPrinterListener)
+  public
+    procedure onPrintFinish; cdecl;
+    procedure onError(i: Integer); cdecl;
+    function asBinder: JIBinder; cdecl;  // Implementação obrigatória de asBinder
+  end;
+
+implementation
+
+uses
+  System.Types,
+  DelphiZXingQRCode,
+  FMX.Graphics,
+  System.UITypes,
+  FMX.Types,
+  System.SysUtils,
+  Math,
+  FMX.Objects,
+  System.Math.Vectors;
+
+{ TImpressoraManager }
+
+function GenerateQRCode(const AText: string; AWidth, AHeight: Integer): TBitmap;
+var
+  QRCode: TDelphiZXingQRCode;
+  Row, Column: Integer;
+  Image: TImage;
+  Scale: Single;
+begin
+  // Cria um TImage temporário para desenhar o QR Code
+  Image := TImage.Create(nil);
+  try
+    Image.Bitmap.SetSize(AWidth, AHeight);
+    Image.Bitmap.Clear(TAlphaColors.White); // Fundo branco
+
+    // Inicializa o QR Code
+    QRCode := TDelphiZXingQRCode.Create;
+    try
+      QRCode.Data := AText;
+      QRCode.QuietZone := 4;
+
+      // Calcula o fator de escala
+      Scale := Min(AWidth / QRCode.Columns, AHeight / QRCode.Rows);
+
+      // Desenha o QR Code no TImage
+      Image.Bitmap.Canvas.BeginScene;
+      try
+        for Row := 0 to QRCode.Rows - 1 do
+        begin
+          for Column := 0 to QRCode.Columns - 1 do
+          begin
+            if QRCode.IsBlack[Row, Column] then
+              Image.Bitmap.Canvas.Fill.Color := TAlphaColors.Black
+            else
+              Image.Bitmap.Canvas.Fill.Color := TAlphaColors.White;
+
+            Image.Bitmap.Canvas.FillRect(RectF(Column * Scale, Row * Scale,
+              (Column + 1) * Scale, (Row + 1) * Scale), 0, 0, [], 1);
+          end;
+        end;
+      finally
+        Image.Bitmap.Canvas.EndScene;
+      end;
+
+      // Retorna o bitmap gerado no TImage
+      Result := TBitmap.Create;
+      Result.Assign(Image.Bitmap);
+    finally
+      QRCode.Free;
+    end;
+  finally
+    Image.Free;
+  end;
+end;
+
+procedure JBitmapFromBitmap(const ABitmap: JBitmap;
+  const ASourceBitmap: TBitmap);
+var
+  BitmapData: TBitmapData;
+  Row, Col: Integer;
+begin
+  if ASourceBitmap.Map(TMapAccess.Read, BitmapData) then
+    try
+      for Row := 0 to ASourceBitmap.Height - 1 do
+      begin
+        for Col := 0 to ASourceBitmap.Width - 1 do
+        begin
+          ABitmap.setPixel(Col, Row, BitmapData.GetPixel(Col, Row));
+        end;
+      end;
+    finally
+      ASourceBitmap.Unmap(BitmapData);
+    end;
+end;
+
+function RotateBitmap(ABitmap: TBitmap; ADegrees: Single): TBitmap;
+var
+  RotatedBitmap: TBitmap;
+  Matrix: TMatrix;
+begin
+  RotatedBitmap := TBitmap.Create(ABitmap.Height, ABitmap.Width);
+  // Trocamos largura e altura para a rotação
+  try
+    // Configura a matriz de rotação
+    Matrix := TMatrix.CreateRotation(DegToRad(ADegrees));
+    // Rotaciona apenas o ângulo em radianos
+
+    // Inicia a cena de desenho do novo bitmap
+    RotatedBitmap.Canvas.BeginScene;
+    try
+      // Aplica a rotação usando a matriz
+      RotatedBitmap.Canvas.SetMatrix(Matrix);
+      RotatedBitmap.Canvas.DrawBitmap(ABitmap, RectF(0, 0, ABitmap.Width,
+        ABitmap.Height), RectF(0, 0, ABitmap.Width, ABitmap.Height), 1, True);
+    finally
+      RotatedBitmap.Canvas.EndScene;
+    end;
+
+    Result := RotatedBitmap; // Retorna o bitmap rotacionado
+  except
+    RotatedBitmap.Free;
+    raise;
+  end;
+end;
+
+procedure TImpressoraManager.AdicionarTexto(const ATexto: string);
+begin
+  if Assigned(FPrinterService) then
+  begin
+    // Adiciona o texto diretamente à fila de impressão
+    FPrinterService.addText(0, 0, 0, StringToJString(ATexto));
+  end
+  else
+    ShowMessage('Serviço de impressão não disponível.');
+end;
+
+constructor TImpressoraManager.Create(AContext: JContext;
+  ADeviceServiceManager: TDeviceServiceManager);
+begin
+  inherited Create;
+  FContext := AContext;
+  FDeviceServiceManager := ADeviceServiceManager;
+end;
+
+procedure TImpressoraManager.VerificarServicoDeImpressao;
+var
+  DeviceService: JAidlDeviceService;
+begin
+  if not FDeviceServiceManager.IsBind then
+  begin
+    ShowMessage('Serviço de impressão não está vinculado.');
+    Exit;
+  end;
+
+  DeviceService := FDeviceServiceManager.GetDeviceService;
+
+  if not Assigned(DeviceService) then
+  begin
+    ShowMessage('Serviço de impressão não está disponível.');
+    Exit;
+  end;
+
+  FPrinterService := TJAidlPrinter_Stub.JavaClass.asInterface
+    (DeviceService.getPrinter);
+
+  if not Assigned(FPrinterService) then
+    ShowMessage('Falha ao inicializar o serviço de impressão.');
+end;
+
+procedure TImpressoraManager.ImprimirComReset(const ATexto: string);
+var
+  TextList: JArrayList;
+  JListObject: JList;
+begin
+  if Assigned(FPrinterService) then
+  begin
+    try
+      // Reseta a fila de impressão para evitar que dados residuais fiquem armazenados
+      FPrinterService.resetQueue;
+
+      // Inicializa a lista de texto
+      TextList := TJArrayList.JavaClass.init;
+
+      // Adiciona o texto à lista
+      TextList.add(TJTextUnit.JavaClass.init(StringToJString(ATexto), 30, TJAlign.JavaClass.CENTER));
+
+      // Adiciona o texto diretamente à fila de impressão
+      FPrinterService.addText(0, 0, 0, StringToJString(ATexto));
+
+      // Faz o cast explícito de JArrayList para JList
+      JListObject := TJList.Wrap((TextList as ILocalObject).GetObjectID);
+
+      // Tenta imprimir diretamente usando o método printText
+      FPrinterService.printText(JListObject, nil);
+
+      // Corta o papel após a impressão
+      FPrinterService.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
+    except
+      on E: Exception do
+        ShowMessage('Erro ao imprimir com reset: ' + E.Message);
+    end;
+  end
+  else
+    ShowMessage('Serviço de impressão não disponível.');
+end;
+
+procedure TImpressoraManager.ImprimirFila;
+var
+  Listener: TPrinterListener;
+begin
+  if Assigned(FPrinterService) then
+  begin
+    // Cria um listener para capturar o sucesso ou falha
+    Listener := TPrinterListener.Create;
+
+    // Executa a fila de impressão usando o listener
+    FPrinterService.printRuiQueue(Listener);
+
+    // Corta o papel após a impressão
+    FPrinterService.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
+  end
+  else
+    ShowMessage('Serviço de impressão não disponível.');
+end;
+
+procedure TImpressoraManager.ImprimirQr(const ATexto: String);
+var
+  QRCodeBitmap: TBitmap;
+  JQRCodeBitmap: JBitmap;
+begin
+  FDeviceServiceManager.BindDeviceService(FContext,
+    procedure
+    begin
+      VerificarServicoDeImpressao;
+
+      if not Assigned(FPrinterService) then
+      begin
+        ShowMessage('Serviço de impressão não disponível.');
+        Exit;
+      end;
+
+      try
+        // Gera o QR Code a partir do texto fornecido
+        QRCodeBitmap := GenerateQRCode(ATexto, 350, 350);
+
+        if not Assigned(QRCodeBitmap) then
+        begin
+          ShowMessage('Falha ao gerar o QR Code.');
+          Exit;
+        end;
+
+        // Converte o TBitmap para JBitmap
+        JQRCodeBitmap := TJBitmap.JavaClass.createBitmap(QRCodeBitmap.Width,
+          QRCodeBitmap.Height, TJBitmap_Config.JavaClass.ARGB_8888);
+        JBitmapFromBitmap(JQRCodeBitmap, QRCodeBitmap);
+
+        // Adiciona a imagem do QR Code gerado ao serviço de impressão
+        FPrinterService.addRuiImage(JQRCodeBitmap, 0);
+
+        // Executa a fila de impressão diretamente
+        FPrinterService.printRuiQueue(nil);
+
+        // Corta o papel após a impressão
+        FPrinterService.cuttingPaper
+          (TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
+
+        ShowMessage('Impressão concluída.');
+      except
+        on E: Exception do
+          ShowMessage('Erro ao imprimir: ' + E.Message);
+      end;
+    end);
+end;
+
+
+procedure TImpressoraManager.ImprimirTextoDireto(const ATexto: string);
+var
+  TextList: JArrayList;
+  JListObject: JList;
+  Listener: TPrinterListener;
+begin
+  if Assigned(FPrinterService) then
+  begin
+    try
+      // Inicializa a lista de texto (JArrayList é uma implementação de JList)
+      TextList := TJArrayList.JavaClass.init;
+
+      // Adiciona o texto à lista como JTextUnit
+      TextList.add(TJTextUnit.JavaClass.init(StringToJString(ATexto), 30, TJAlign.JavaClass.CENTER));
+
+      // Faz o cast explícito de JArrayList para JList
+      JListObject := TJList.Wrap((TextList as ILocalObject).GetObjectID);
+
+      // Cria o listener para capturar o sucesso ou falha da impressão
+      Listener := TPrinterListener.Create;
+
+      // Chama o método printText com a lista convertida e o listener
+      FPrinterService.printText(JListObject, Listener);
+
+      // Corta o papel após a impressão
+      FPrinterService.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
+    except
+      on E: Exception do
+        ShowMessage('Erro ao imprimir diretamente: ' + E.Message);
+    end;
+  end
+  else
+    ShowMessage('Serviço de impressão não disponível.');
+end;
+
+
+procedure TImpressoraManager.ImprimirTexto(const ATexto: string);
+var
+  Template: JPrintTemplate;
+  PrinterState: Integer;
+  PrinterListener: TPrinterListener;
+  AidlPrinter: JAidlPrinter;
+begin
+  FDeviceServiceManager.BindDeviceService(FContext,
+    procedure
+    begin
+      VerificarServicoDeImpressao;
+
+      if not Assigned(FPrinterService) then
+      begin
+        ShowMessage('Serviço de impressão não disponível.');
+        Exit;
+      end;
+
+      try
+        Template := TJPrintTemplate.JavaClass.getInstance;
+        Template.init(FContext);
+        Template.Clear;
+
+        // Adiciona o texto ao template de impressão
+        Template.add(TJTextUnit.JavaClass.init(StringToJString(#13#10), 60, TJAlign.JavaClass.CENTER));  // Linha em branco
+        Template.add(TJTextUnit.JavaClass.init(StringToJString(ATexto), 30, TJAlign.JavaClass.CENTER));  // Texto principal
+        Template.add(TJTextUnit.JavaClass.init(StringToJString(#13#10), 60, TJAlign.JavaClass.CENTER));  // Linha em branco
+
+        // Gera o bitmap a partir do template
+        if Template.getPrintBitmap = nil then
+        begin
+          ShowMessage('Erro ao gerar bitmap de impressão.');
+          Exit;
+        end;
+
+        // Adiciona o bitmap rotacionado à fila de impressão
+        FPrinterService.addRuiImage(Template.getPrintBitmap, 180);
+
+        PrinterListener := TPrinterListener.Create;
+
+        // Executa a fila de impressão diretamente, sem callback
+        FPrinterService.printRuiQueue(PrinterListener);
+
+
+        // Corta o papel diretamente após a tentativa de impressão
+        FPrinterService.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
+      except
+        on E: Exception do
+          ShowMessage('Erro ao imprimir: ' + E.Message);
+      end;
+    end);
+end;
+
+
+procedure TImpressoraManager.ImprimirVazio;
+begin
+  FDeviceServiceManager.BindDeviceService(FContext,
+    procedure
+    begin
+      VerificarServicoDeImpressao;
+
+      if not Assigned(FPrinterService) then
+      begin
+        ShowMessage('Serviço de impressão não disponível.');
+        Exit;
+      end;
+
+      try
+
+        FPrinterService.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
+      except
+        on E: Exception do
+          ShowMessage('Erro ao imprimir: ' + E.Message);
+      end;
+    end);
+end;
+
+procedure TImpressoraManager.InicializarImpressora;
+begin
+  FDeviceServiceManager.BindDeviceService(FContext,
+    procedure
+    begin
+      VerificarServicoDeImpressao;
+      if not Assigned(FPrinterService) then
+      begin
+        ShowMessage('Serviço de impressão não disponível.');
+        Exit;
+      end;
+    end);
+end;
+
+{ TPrinterListener }
+
+
+function TPrinterListener.asBinder: JIBinder;
+begin
+  // Delegando a implementação do asBinder para a classe base
+  inherited;
+end;
+
+procedure TPrinterListener.onError(i: Integer);
+begin
+ ShowMessage('Erro ao imprimir: ' + IntToStr(i));
+end;
+
+procedure TPrinterListener.onPrintFinish;
+begin
+  ShowMessage('Impressão concluída com sucesso.');
+end;
+
+end.

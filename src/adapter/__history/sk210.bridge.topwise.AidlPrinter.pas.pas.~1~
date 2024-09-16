@@ -1,0 +1,151 @@
+
+unit C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas;
+
+interface
+
+uses
+  Androidapi.JNIBridge,
+  Androidapi.JNI.GraphicsContentViewText,
+  Androidapi.JNI.JavaTypes,
+  Androidapi.JNI.Os;
+
+type
+// ===== Forward declarations =====
+
+  JAidlPrinter = interface;//com.topwise.cloudpos.aidl.printer.AidlPrinter
+  JAidlPrinterListener = interface;//com.topwise.cloudpos.aidl.printer.AidlPrinterListener
+  JPrintCuttingMode = interface;//com.topwise.cloudpos.aidl.printer.PrintCuttingMode
+  JPrinterMessage = interface;//com.topwise.cloudpos.aidl.printer.PrinterMessage
+
+// ===== Interface declarations =====
+
+  JAidlPrinterClass = interface(JIInterfaceClass)
+    ['{CEF32601-F5BA-4759-93AA-EC4E69DA388E}']
+    {class} function getPrinterState: Integer; cdecl;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/printer/AidlPrinter')]
+  JAidlPrinter = interface(JIInterface)
+    ['{D25C0A36-C92D-488F-9548-2D0669B19F3D}']
+    procedure addBarcode(i: Integer; i1: Integer; string_: JString; i2: Integer; i3: Integer); cdecl;
+    function addHuifuImage(bitmap: JBitmap; i: Integer; i1: Integer; i2: Integer): Boolean; cdecl;
+    procedure addImage(i: Integer; bitmap: JBitmap); cdecl;
+    procedure addImageFile(i: Integer; string_: JString); cdecl;
+    procedure addLineFeed(i: Integer); cdecl;
+    procedure addQRCode(i: Integer; i1: Integer; string_: JString); cdecl;
+    function addRuiBarCode(string_: JString; i: Integer; i1: Integer; i2: Integer): Boolean; cdecl;
+    function addRuiImage(bitmap: JBitmap; i: Integer): Boolean; cdecl;
+    function addRuiQRCode(string_: JString; i: Integer; i1: Integer): Boolean; cdecl;
+    function addRuiText(list: JList): Boolean; cdecl;
+    procedure addText(i: Integer; i1: Integer; i2: Integer; string_: JString); cdecl;
+    procedure close; cdecl;
+    function cuttingPaper(printCuttingMode: JPrintCuttingMode): Integer; cdecl;
+    function getClearPrinterMileage(i: Integer): Int64; cdecl;
+    function getPosPrintPaperState: Integer; cdecl;
+    function getPrinterGray: Integer; cdecl;
+    function getPrinterMessage: JPrinterMessage; cdecl;
+    procedure goPaper(i: Integer); cdecl;
+    function isPosPrinterCoverOpen: Boolean; cdecl;
+    function open: Integer; cdecl;
+    procedure printBarCode(i: Integer; i1: Integer; i2: Integer; i3: Integer; string_: JString; aidlPrinterListener: JAidlPrinterListener); cdecl;
+    procedure printBmp(i: Integer; i1: Integer; i2: Integer; bitmap: JBitmap; aidlPrinterListener: JAidlPrinterListener); cdecl;
+    function printBuf(b: TJavaArray<Byte>): Integer; cdecl;
+    procedure printEnhancedText(list: JList; aidlPrinterListener: JAidlPrinterListener); cdecl;
+    procedure printQrCode(i: Integer; i1: Integer; i2: Integer; string_: JString; aidlPrinterListener: JAidlPrinterListener); cdecl;
+    function printRollback(i: Integer): Integer; cdecl;
+    procedure printRuiQueue(aidlPrinterListener: JAidlPrinterListener); cdecl;
+    procedure printText(list: JList; aidlPrinterListener: JAidlPrinterListener); cdecl;
+    function resetQueue: Boolean; cdecl;
+    function setPrintLedState(b: Boolean; i: Integer): Integer; cdecl;
+    procedure setPrinterGray(i: Integer); cdecl;
+    procedure start(aidlPrinterListener: JAidlPrinterListener); cdecl;
+  end;
+  TJAidlPrinter = class(TJavaGenericImport<JAidlPrinterClass, JAidlPrinter>) end;
+
+  JAidlPrinterListenerClass = interface(JIInterfaceClass)
+    ['{62D30C1A-4AF7-4E0E-92C7-96035B461A8C}']
+    {class} procedure onError(i: Integer); cdecl;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/printer/AidlPrinterListener')]
+  JAidlPrinterListener = interface(JIInterface)
+    ['{3A7B1AB2-83D9-47A3-A0CB-9F5FC0BE500A}']
+    procedure onPrintFinish; cdecl;
+  end;
+  TJAidlPrinterListener = class(TJavaGenericImport<JAidlPrinterListenerClass, JAidlPrinterListener>) end;
+
+  JPrintCuttingModeClass = interface(JEnumClass)
+    ['{67432ED8-A3B1-4165-8AF8-F75200702FBE}']
+    {class} function _GetCREATOR: JParcelable_Creator; cdecl;
+    {class} function _GetCUTTING_MODE_FULL: JPrintCuttingMode; cdecl;
+    {class} function _GetCUTTING_MODE_HALT: JPrintCuttingMode; cdecl;
+    {class} function valueOf(string_: JString): JPrintCuttingMode; cdecl;
+    {class} function values: TJavaObjectArray<JPrintCuttingMode>; cdecl;//Deprecated
+    {class} property CREATOR: JParcelable_Creator read _GetCREATOR;
+    {class} property CUTTING_MODE_FULL: JPrintCuttingMode read _GetCUTTING_MODE_FULL;
+    {class} property CUTTING_MODE_HALT: JPrintCuttingMode read _GetCUTTING_MODE_HALT;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/printer/PrintCuttingMode')]
+  JPrintCuttingMode = interface(JEnum)
+    ['{BD385AAE-2512-4925-BCC1-43F3359C88F2}']
+    function _Getmode: Integer; cdecl;
+    procedure _Setmode(Value: Integer); cdecl;
+    function describeContents: Integer; cdecl;
+    function getMode: Integer; cdecl;
+    procedure writeToParcel(parcel: JParcel; i: Integer); cdecl;
+    property mode: Integer read _Getmode write _Setmode;
+  end;
+  TJPrintCuttingMode = class(TJavaGenericImport<JPrintCuttingModeClass, JPrintCuttingMode>) end;
+
+  JPrinterMessageClass = interface(JParcelableClass)
+    ['{ED154B06-FD85-49CE-AF95-5BEE4C77E8AA}']
+    {class} function _GetCREATOR: JParcelable_Creator; cdecl;
+    {class} function init: JPrinterMessage; cdecl; overload;//Deprecated
+    {class} function init(parcel: JParcel): JPrinterMessage; cdecl; overload;
+    {class} property CREATOR: JParcelable_Creator read _GetCREATOR;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/printer/PrinterMessage')]
+  JPrinterMessage = interface(JParcelable)
+    ['{69357BCF-B129-4B20-B343-9CAAD923AFED}']
+    function _GetprinterCount: Integer; cdecl;
+    procedure _SetprinterCount(Value: Integer); cdecl;
+    function _GetprinterGray: Integer; cdecl;
+    function _GetprinterMileage: Int64; cdecl;
+    procedure _SetprinterMileage(Value: Int64); cdecl;
+    function _GetprinterTemperature: Integer; cdecl;
+    procedure _SetprinterTemperature(Value: Integer); cdecl;
+    function describeContents: Integer; cdecl;
+    function getPrinterCount: Integer; cdecl;
+    function getPrinterGray: Integer; cdecl;
+    function getPrinterMileage: Int64; cdecl;
+    function getPrinterTemperature: Integer; cdecl;
+    function getPrinterVoltage: Integer; cdecl;
+    procedure setPrinterCount(i: Integer); cdecl;
+    procedure setPrinterGray(i: Integer); cdecl;
+    procedure setPrinterMileage(l: Int64); cdecl;
+    procedure setPrinterTemperature(i: Integer); cdecl;
+    procedure setPrinterVoltage(i: Integer); cdecl;
+    procedure writeToParcel(parcel: JParcel; i: Integer); cdecl;
+    property printerCount: Integer read _GetprinterCount write _SetprinterCount;
+    property printerGray: Integer read _GetprinterGray;
+    property printerMileage: Int64 read _GetprinterMileage write _SetprinterMileage;
+    property printerTemperature: Integer read _GetprinterTemperature write _SetprinterTemperature;
+  end;
+  TJPrinterMessage = class(TJavaGenericImport<JPrinterMessageClass, JPrinterMessage>) end;
+
+implementation
+
+procedure RegisterTypes;
+begin
+  TRegTypes.RegisterType('C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JAidlPrinter', TypeInfo(C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JAidlPrinter));
+  TRegTypes.RegisterType('C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JAidlPrinterListener', TypeInfo(C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JAidlPrinterListener));
+  TRegTypes.RegisterType('C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JPrintCuttingMode', TypeInfo(C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JPrintCuttingMode));
+  TRegTypes.RegisterType('C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JPrinterMessage', TypeInfo(C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.AidlPrinter.pas.JPrinterMessage));
+end;
+
+initialization
+  RegisterTypes;
+end.
+

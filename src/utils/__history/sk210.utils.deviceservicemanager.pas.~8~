@@ -1,0 +1,54 @@
+unit sk210.utils.deviceservicemanager;
+
+interface
+
+uses
+  System.SysUtils,
+  Androidapi.JNIBridge,
+  Androidapi.JNI.JavaTypes,
+  sk210.bridge.topwise.cloudpos,
+  Androidapi.JNI.GraphicsContentViewText;
+
+type
+  TDeviceServiceManager = class
+  private
+    FContext: JContext;
+    FDeviceService: JAidlDeviceService;
+
+    function GetDeviceService: JAidlDeviceService;
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
+implementation
+
+uses
+  Androidapi.Helpers, Androidapi.JNI.Os;
+
+{ TDeviceServiceManager }
+
+constructor TDeviceServiceManager.Create;
+begin
+  FDeviceService := TJAidlDeviceService.Create;
+end;
+
+destructor TDeviceServiceManager.Destroy;
+begin
+
+  inherited;
+end;
+
+function TDeviceServiceManager.GetDeviceService: JAidlDeviceService;
+var
+  Service: JObject;
+begin
+  // Obtendo o serviço usando métodos do SDK
+  Service := TAndroidHelper.Context.getSystemService(StringToJString('topwise_cloudpos_device_service'));
+  if Service = nil then
+    raise Exception.Create('Serviço de dispositivo não encontrado.');
+
+  Result := TJAidlDeviceService_Stub.JavaClass.asInterface(TJBinder.Wrap((Service as ILocalObject).GetObjectID));
+end;
+
+end.

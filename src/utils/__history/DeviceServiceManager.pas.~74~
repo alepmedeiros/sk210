@@ -1,0 +1,152 @@
+unit DeviceServiceManager;
+
+interface
+
+uses
+  Androidapi.JNIBridge, Androidapi.JNI.JavaTypes, Androidapi.JNI.Os,
+  Androidapi.Helpers, FMX.Helpers.Android, FMX.Dialogs,
+  Androidapi.JNI.GraphicsContentViewText, System.SysUtils,
+  sk210.bridge.topwise.cloudpos;
+
+type
+  // ServiceConnection para gerenciar a conexão com o serviço
+  TMyServiceConnection = class(TJavaLocal, JServiceConnection)
+  private
+    FOnServiceConnected: TProc<JComponentName, JIBinder>;
+    FOnServiceDisconnected: TProc;
+    FDeviceService: JAidlDeviceService;
+  public
+    constructor Create(AOnServiceConnected: TProc<JComponentName, JIBinder>;
+      AOnServiceDisconnected: TProc);
+    procedure onServiceConnected(name: JComponentName; service: JIBinder); cdecl;
+    procedure onServiceDisconnected(name: JComponentName); cdecl;
+    procedure onBindingDied(name: JComponentName); cdecl;  // Implementação necessária
+    procedure onNullBinding(name: JComponentName); cdecl;  // Implementação necessária
+    property DeviceService: JAidlDeviceService read FDeviceService;
+  end;
+
+  // Gerenciador do serviço de dispositivo (DeviceServiceManager)
+  TDeviceServiceManager = class
+  private
+    FContext: JContext;
+    FDeviceServiceConnection: TMyServiceConnection;
+    FIsBind: Boolean;
+    class var FInstance: TDeviceServiceManager;
+  public
+    class function GetInstance: TDeviceServiceManager;
+    function BindDeviceService(AContext: JContext; AOnServiceConnected: TProc): Boolean;
+    procedure UnbindDeviceService;
+    function GetPrintManager: JAidlPrinter;
+    function IsBind: Boolean;
+  end;
+
+implementation
+
+uses
+  Androidapi.Log;
+
+{ TMyServiceConnection }
+
+constructor TMyServiceConnection.Create(AOnServiceConnected: TProc<JComponentName, JIBinder>;
+  AOnServiceDisconnected: TProc);
+begin
+  inherited Create;
+  FOnServiceConnected := AOnServiceConnected;
+  FOnServiceDisconnected := AOnServiceDisconnected;
+end;
+
+procedure TMyServiceConnection.onServiceConnected(name: JComponentName; service: JIBinder);
+begin
+  // Vinculando o serviço de dispositivo
+  FDeviceService := TJAidlDeviceService_Stub.JavaClass.asInterface(service);
+
+  // Chama o callback, se necessário
+  if Assigned(FOnServiceConnected) then
+    FOnServiceConnected(name, service);
+end;
+
+procedure TMyServiceConnection.onServiceDisconnected(name: JComponentName);
+begin
+  // Desvincula o serviço
+  FDeviceService := nil;
+
+  // Chama o callback de desconexão
+  if Assigned(FOnServiceDisconnected) then
+    FOnServiceDisconnected;
+end;
+
+procedure TMyServiceConnection.onBindingDied(name: JComponentName);
+begin
+  // Tratar a morte da ligação (pode ser deixado como um log simples)
+  __android_log_write(ANDROID_LOG_INFO, 'TMyServiceConnection', 'Binding died');
+end;
+
+procedure TMyServiceConnection.onNullBinding(name: JComponentName);
+begin
+  // Tratar uma ligação nula (pode ser deixado como um log simples)
+  __android_log_write(ANDROID_LOG_INFO, 'TMyServiceConnection', 'Null binding occurred');
+end;
+
+{ TDeviceServiceManager }
+
+class function TDeviceServiceManager.GetInstance: TDeviceServiceManager;
+begin
+  if FInstance = nil then
+    FInstance := TDeviceServiceManager.Create;
+  Result := FInstance;
+end;
+
+function TDeviceServiceManager.BindDeviceService(AContext: JContext; AOnServiceConnected: TProc): Boolean;
+var
+  Intent: JIntent;
+begin
+  Result := False;
+
+  FContext := AContext;
+  Intent := TJIntent.JavaClass.init;
+  Intent.setAction(StringToJString('topwise_cloudpos_device_service'));
+  Intent.setClassName(StringToJString('com.android.topwise.topusdkservice'),
+    StringToJString('com.android.topwise.topusdkservice.service.DeviceService'));
+
+  // Inicia a conexão com o serviço
+  FDeviceServiceConnection := TMyServiceConnection.Create(
+    procedure(name: JComponentName; service: JIBinder)
+    begin
+      FIsBind := True;
+      if Assigned(AOnServiceConnected) then
+        AOnServiceConnected;
+    end,
+    procedure
+    begin
+      FIsBind := False;
+    end
+  );
+
+  // Vincular ao serviço
+  Result := TAndroidHelper.Context.bindService(Intent, FDeviceServiceConnection, TJContext.JavaClass.BIND_AUTO_CREATE);
+end;
+
+procedure TDeviceServiceManager.UnbindDeviceService;
+begin
+  if FIsBind then
+  begin
+    FContext.unbindService(FDeviceServiceConnection);
+    FIsBind := False;
+  end;
+end;
+
+function TDeviceServiceManager.GetPrintManager: JAidlPrinter;
+begin
+  if Assigned(FDeviceServiceConnection) and Assigned(FDeviceServiceConnection.DeviceService) then
+    Result := TJAidlPrinter_Stub.JavaClass.asInterface(FDeviceServiceConnection.DeviceService.getPrinter)
+  else
+    Result := nil;
+end;
+
+function TDeviceServiceManager.IsBind: Boolean;
+begin
+  Result := FIsBind;
+end;
+
+end.
+

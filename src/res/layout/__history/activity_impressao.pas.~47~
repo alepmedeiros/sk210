@@ -1,0 +1,92 @@
+unit activity_impressao;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Types,
+  System.UITypes,
+  System.Classes,
+  System.Variants,
+  FMX.Types,
+  FMX.Controls,
+  FMX.Forms,
+  FMX.Graphics,
+  FMX.Dialogs,
+  FMX.StdCtrls,
+  FMX.Objects,
+  FMX.Controls.Presentation,
+  FMX.Edit,
+  FMX.Layouts,
+  Androidapi.Helpers;
+
+type
+  TActivityImpressao = class(TForm)
+    Layout1: TLayout;
+    edtTexto: TEdit;
+    Rectangle1: TRectangle;
+    Layout2: TLayout;
+    btnImpTexto: TButton;
+    btnImpBarCode: TButton;
+    btnImpQR: TButton;
+    btnImpFrase: TButton;
+    btnImpImagem: TButton;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure btnImpImagemClick(Sender: TObject);
+    procedure btnImpQRClick(Sender: TObject);
+  private
+
+  public
+
+  end;
+
+var
+  ActivityImpressao: TActivityImpressao;
+
+implementation
+
+uses
+  Androidapi.JNI.GraphicsContentViewText;
+
+{$R *.fmx}
+
+procedure TActivityImpressao.btnImpImagemClick(Sender: TObject);
+begin
+ try
+
+  except
+    on E: Exception do
+      ShowMessage('Erro na impressão: ' + E.Message);
+  end;
+end;
+
+procedure TActivityImpressao.btnImpQRClick(Sender: TObject);
+begin
+  try
+
+  except
+    on E: Exception do
+      ShowMessage('Erro na impressão: ' + E.Message);
+  end;
+end;
+
+procedure TActivityImpressao.FormCreate(Sender: TObject);
+begin
+  inherited;
+  // Inicializa o gerenciador do serviço de dispositivo
+  FDeviceServiceManager := TDeviceServiceManager.GetInstance;
+
+  // Inicializa o gerenciador da impressora
+
+end;
+
+procedure TActivityImpressao.FormDestroy(Sender: TObject);
+begin
+  // Libera o recurso de impressão e desativa o serviço
+
+  FDeviceServiceManager.UnBindDeviceService;
+  inherited;
+end;
+
+end.
