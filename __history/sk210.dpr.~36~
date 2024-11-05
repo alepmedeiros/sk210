@@ -26,9 +26,7 @@ uses
   activity_scanner in 'src\res\layout\activity_scanner.pas' {ActivityScanner},
   CameraManager in 'src\utils\CameraManager.pas',
   activity_sensor in 'src\res\layout\activity_sensor.pas' {ActivitySensor},
-  SensorProximityManager in 'src\utils\SensorProximityManager.pas',
-  activity_sensor_bobina in 'src\res\layout\activity_sensor_bobina.pas' {ActivitySensorBobina},
-  SensorBobinaManager in 'src\utils\SensorBobinaManager.pas';
+  SensorProximityManager in 'src\utils\SensorProximityManager.pas';
 
 {$R *.res}
 
@@ -38,6 +36,5 @@ begin
   Application.CreateForm(TActivityCamera, ActivityCamera);
   Application.CreateForm(TActivityScanner, ActivityScanner);
   Application.CreateForm(TActivitySensor, ActivitySensor);
-  Application.CreateForm(TActivitySensorBobina, ActivitySensorBobina);
   Application.Run;
 end.
