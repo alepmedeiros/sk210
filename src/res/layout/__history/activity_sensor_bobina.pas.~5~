@@ -1,0 +1,54 @@
+unit activity_sensor_bobina;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Types,
+  System.UITypes,
+  System.Classes,
+  System.Variants,
+  FMX.Types,
+  FMX.Controls,
+  FMX.Forms,
+  FMX.Graphics,
+  FMX.Dialogs,
+  FMX.Controls.Presentation,
+  FMX.StdCtrls,
+  FMX.Objects,
+  FMX.Layouts;
+
+type
+  TActivitySensorBobina = class(TForm)
+    Layout1: TLayout;
+    Rectangle1: TRectangle;
+    Layout2: TLayout;
+    CheckStatusButton: TButton;
+    procedure CheckStatusButtonClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  ActivitySensorBobina: TActivitySensorBobina;
+
+implementation
+
+{$R *.fmx}
+
+procedure TActivitySensorBobina.CheckStatusButtonClick(Sender: TObject);
+begin
+  // Verifica o estado da impressora e exibe o status
+  FSensorBobinaManager.CheckPrinterStatus;
+end;
+
+procedure TActivitySensorBobina.FormCreate(Sender: TObject);
+begin
+  // Inicializa o SensorBobinaManager para gerenciar o estado da impressora
+  FSensorBobinaManager := TSensorBobinaManager.Create;
+end;
+
+end.

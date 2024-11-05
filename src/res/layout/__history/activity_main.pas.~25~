@@ -19,7 +19,7 @@ uses
   FMX.TabControl;
 
 type
-  TForm3 = class(TForm)
+  TActivityMain = class(TForm)
     Layout1: TLayout;
     Rectangle1: TRectangle;
     Layout2: TLayout;
@@ -63,60 +63,58 @@ type
     procedure itemsensorpresencaClick(Sender: TObject);
     procedure itemsensorbobinaClick(Sender: TObject);
   private
-    {
-    ListaItemBox
-    Camera
-    Scanner
-    Impressao
-    Tef
-    Sensor de Presença
-    Sensor de Bobina
-    }
+
   public
     { Public declarations }
   end;
 
 var
-  Form3: TForm3;
+  ActivityMain: TActivityMain;
 
 implementation
 
 uses
   System.Rtti,
-  sk210.utils;
+  sk210.utils,
+  activity_impressao,
+  activity_camera,
+  activity_scanner,
+  activity_sensor,
+  activity_sensor_bobina;
 
 {$R *.fmx}
 { TForm3 }
 
-
-procedure TForm3.itemCameraClick(Sender: TObject);
+procedure TActivityMain.itemCameraClick(Sender: TObject);
 begin
   ShowMessage('Usando Camera');
 end;
 
-procedure TForm3.itemImpressoaClick(Sender: TObject);
+procedure TActivityMain.itemImpressoaClick(Sender: TObject);
 begin
-  ShowMessage('Usando Impressao');
+  Application.CreateForm(TActivityImpressao, ActivityImpressao);
+  ActivityImpressao.Show;
+  Application.MainForm := ActivityImpressao;
 end;
 
-procedure TForm3.itemScannerClick(Sender: TObject);
+procedure TActivityMain.itemScannerClick(Sender: TObject);
 begin
   ShowMessage('Usando Scanner');
 end;
 
-procedure TForm3.itemsensorbobinaClick(Sender: TObject);
+procedure TActivityMain.itemsensorbobinaClick(Sender: TObject);
 begin
   ShowMessage('Usando sensor de bobina');
 end;
 
-procedure TForm3.itemsensorpresencaClick(Sender: TObject);
+procedure TActivityMain.itemsensorpresencaClick(Sender: TObject);
 begin
   ShowMessage('Usando sendor de presença');
 end;
 
-procedure TForm3.itemtefClick(Sender: TObject);
+procedure TActivityMain.itemtefClick(Sender: TObject);
 begin
-  ShowMessage('Usando tef');
+  ShowMessage('Implementar a chamada do TEF via SDK');
 end;
 
 end.

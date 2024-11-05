@@ -1,0 +1,83 @@
+unit SensorBobinaManager;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Androidapi.Helpers, FMX.Dialogs,
+  sk210.bridge.topwise.AidlPrinter, DeviceServiceManager;
+
+type
+  TSensorBobinaManager = class
+  private
+    FPrinterManager: JAidlPrinter;
+    function GetPaperState: Integer;
+    function IsCoverOpen: Boolean;
+  public
+    constructor Create;
+    procedure CheckPrinterStatus;
+  end;
+
+implementation
+
+{ TSensorBobinaManager }
+
+constructor TSensorBobinaManager.Create;
+begin
+  inherited Create;
+  // Obtém o gerenciador da impressora do DeviceServiceManager
+  FPrinterManager := DeviceServiceManager.GetInstance.GetPrintManager;
+
+  if FPrinterManager = nil then
+    raise Exception.Create('Gerenciador da impressora não disponível.');
+end;
+
+function TSensorBobinaManager.GetPaperState: Integer;
+begin
+  try
+    Result := FPrinterManager.getPosPrintPaperState;
+  except
+    on E: Exception do
+    begin
+      ShowMessage('Erro ao verificar o estado do papel: ' + E.Message);
+      Result := -1;
+    end;
+  end;
+end;
+
+function TSensorBobinaManager.IsCoverOpen: Boolean;
+begin
+  try
+    Result := FPrinterManager.isPosPrinterCoverOpen;
+  except
+    on E: Exception do
+    begin
+      ShowMessage('Erro ao verificar a tampa da impressora: ' + E.Message);
+      Result := False;
+    end;
+  end;
+end;
+
+procedure TSensorBobinaManager.CheckPrinterStatus;
+var
+  PaperState: Integer;
+  CoverOpen: Boolean;
+begin
+  // Verifica o estado do papel
+  PaperState := GetPaperState;
+
+  // Verifica o estado da tampa da impressora
+  CoverOpen := IsCoverOpen;
+
+  // Avalia o status com base no estado do papel e da tampa da impressora
+  if PaperState = 0 then
+    ShowMessage('O papel está quase acabando.')
+  else if PaperState = $01 then
+    ShowMessage('O papel acabou.')
+  else if (PaperState = $00) and (not CoverOpen) then
+    ShowMessage('Há papel suficiente.')
+  else if CoverOpen then
+    ShowMessage('A tampa da impressora está aberta.');
+end;
+
+end.
+

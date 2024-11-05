@@ -75,14 +75,21 @@ implementation
 
 uses
   System.Rtti,
-  sk210.utils, activity_impressao;
+  sk210.utils,
+  activity_impressao,
+  activity_camera,
+  activity_scanner,
+  activity_sensor,
+  activity_sensor_bobina;
 
 {$R *.fmx}
 { TForm3 }
 
 procedure TActivityMain.itemCameraClick(Sender: TObject);
 begin
-  ShowMessage('Usando Camera');
+  Application.CreateForm(TActivityCamera, ActivityCamera);
+  ActivityCamera.Show;
+  Application.MainForm := ActivityCamera;
 end;
 
 procedure TActivityMain.itemImpressoaClick(Sender: TObject);
@@ -94,17 +101,23 @@ end;
 
 procedure TActivityMain.itemScannerClick(Sender: TObject);
 begin
-  ShowMessage('Usando Scanner');
+  Application.CreateForm(TActivityScanner, ActivityScanner);
+  ActivityScanner.Show;
+  Application.MainForm := ActivityScanner;
 end;
 
 procedure TActivityMain.itemsensorbobinaClick(Sender: TObject);
 begin
-  ShowMessage('Usando sensor de bobina');
+  Application.CreateForm(TActivitySensorBobina, ActivitySensorBobina);
+  ActivitySensorBobina.Show;
+  Application.MainForm := ActivitySensorBobina;
 end;
 
 procedure TActivityMain.itemsensorpresencaClick(Sender: TObject);
 begin
-  ShowMessage('Usando sendor de presença');
+  Application.CreateForm(TActivitySensor, ActivitySensorBobina);
+  ActivitySensorBobina.Show;
+  Application.MainForm := ActivitySensorBobina;
 end;
 
 procedure TActivityMain.itemtefClick(Sender: TObject);
