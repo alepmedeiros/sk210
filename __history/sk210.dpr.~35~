@@ -25,8 +25,7 @@ uses
   ScannerManager in 'src\utils\ScannerManager.pas',
   activity_scanner in 'src\res\layout\activity_scanner.pas' {ActivityScanner},
   CameraManager in 'src\utils\CameraManager.pas',
-  activity_sensor in 'src\res\layout\activity_sensor.pas' {ActivitySensor},
-  SensorProximityManager in 'src\utils\SensorProximityManager.pas';
+  activity_sensor in 'src\res\layout\activity_sensor.pas' {ActivitySensor};
 
 {$R *.res}
 

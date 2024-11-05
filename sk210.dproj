@@ -269,6 +269,7 @@
             <Form>ActivitySensor</Form>
             <FormType>fmx</FormType>
         </DCCReference>
+        <DCCReference Include="src\utils\SensorProximityManager.pas"/>
         <RcItem Include="asserts\camera.png">
             <ResourceType>RCDATA</ResourceType>
             <ResourceId>camera</ResourceId>
