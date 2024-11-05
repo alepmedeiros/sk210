@@ -1,0 +1,112 @@
+unit SensorProximityManager;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Androidapi.JNI.Hardware, Androidapi.JNIBridge,
+  Androidapi.Helpers, FMX.Types, FMX.ListBox;
+
+type
+  // Evento para atualizar o status do sensor na interface
+  TProximityStatusEvent = procedure(const Status: string) of object;
+
+  TSensorProximityManager = class
+  private
+    FSensorManager: JSensorManager;
+    FProximitySensor: JSensor;
+    FOnStatusUpdate: TProximityStatusEvent;
+    FEventListener: JSensorEventListener;
+    FStatusList: TListBox;
+    procedure UpdateStatus(const Status: string);
+  public
+    constructor Create(AStatusList: TListBox; AOnStatusUpdate: TProximityStatusEvent);
+    procedure StartSensor;
+    procedure StopSensor;
+  end;
+
+  TProximityEventListener = class(TJavaLocal, JSensorEventListener)
+  private
+    FManager: TSensorProximityManager;
+  public
+    constructor Create(AManager: TSensorProximityManager);
+    procedure onSensorChanged(event: JSensorEvent); cdecl;
+    procedure onAccuracyChanged(sensor: JSensor; accuracy: Integer); cdecl;
+  end;
+
+implementation
+
+uses
+  Androidapi.JNI.GraphicsContentViewText;
+
+{ TSensorProximityManager }
+
+constructor TSensorProximityManager.Create(AStatusList: TListBox; AOnStatusUpdate: TProximityStatusEvent);
+begin
+  inherited Create;
+  FStatusList := AStatusList;
+  FOnStatusUpdate := AOnStatusUpdate;
+
+  // Inicializa o SensorManager e o Sensor de Proximidade
+  FSensorManager := TJSensorManager.Wrap(TAndroidHelper.Context.getSystemService(TJContext.JavaClass.SENSOR_SERVICE));
+  FProximitySensor := FSensorManager.getDefaultSensor(TJSensor.JavaClass.TYPE_PROXIMITY);
+
+  if FProximitySensor = nil then
+    raise Exception.Create('Sensor de proximidade não encontrado.');
+
+  // Cria o listener do sensor
+  FEventListener := TProximityEventListener.Create(Self);
+end;
+
+procedure TSensorProximityManager.StartSensor;
+begin
+  // Inicia a escuta do sensor com o delay padrão
+  FSensorManager.registerListener(FEventListener, FProximitySensor, TJSensorManager.JavaClass.SENSOR_DELAY_NORMAL);
+end;
+
+procedure TSensorProximityManager.StopSensor;
+begin
+  // Para a escuta do sensor
+  FSensorManager.unregisterListener(FEventListener);
+end;
+
+procedure TSensorProximityManager.UpdateStatus(const Status: string);
+begin
+  if Assigned(FOnStatusUpdate) then
+    FOnStatusUpdate(Status);
+
+  // Adiciona o status atual ao ListBox
+  if Assigned(FStatusList) then
+    FStatusList.Items.Add(Status);
+end;
+
+{ TProximityEventListener }
+
+constructor TProximityEventListener.Create(AManager: TSensorProximityManager);
+begin
+  inherited Create;
+  FManager := AManager;
+end;
+
+procedure TProximityEventListener.onSensorChanged(event: JSensorEvent);
+var
+  Status: string;
+begin
+  if event.sensor.getType = TJSensor.JavaClass.TYPE_PROXIMITY then
+  begin
+    // Define o status conforme a proximidade
+    if event.values[0] = 0 then
+      Status := 'Near'
+    else
+      Status := 'Away';
+
+    FManager.UpdateStatus(Status);
+  end;
+end;
+
+procedure TProximityEventListener.onAccuracyChanged(sensor: JSensor; accuracy: Integer);
+begin
+  // Este exemplo não requer tratamento da precisão
+end;
+
+end.
+

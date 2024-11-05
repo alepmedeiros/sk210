@@ -3,15 +3,42 @@ unit activity_sensor;
 interface
 
 uses
-  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
-  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs;
+  System.SysUtils,
+  System.Types,
+  System.UITypes,
+  System.Classes,
+  System.Variants,
+  FMX.Types,
+  FMX.Controls,
+  FMX.Forms,
+  FMX.Graphics,
+  FMX.Dialogs,
+  FMX.Objects,
+  FMX.Layouts,
+  FMX.ListBox,
+  FMX.StdCtrls,
+  FMX.Controls.Presentation,
+  SensorProximityManager;
 
 type
   TActivitySensor = class(TForm)
+    Layout1: TLayout;
+    Rectangle1: TRectangle;
+    Layout2: TLayout;
+    Layout3: TLayout;
+    btnParar: TButton;
+    btnIniciar: TButton;
+    LabelStatus: TLabel;
+    ListBoxHistory: TListBox;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure btnIniciarClick(Sender: TObject);
+    procedure btnPararClick(Sender: TObject);
   private
     { Private declarations }
   public
-    { Public declarations }
+    FProximityManager: TSensorProximityManager;
+    procedure UpdateProximityStatus(const Status: string);
   end;
 
 var
@@ -20,5 +47,34 @@ var
 implementation
 
 {$R *.fmx}
+
+procedure TActivitySensor.btnIniciarClick(Sender: TObject);
+begin
+  // Inicia o monitoramento do sensor de proximidade
+  FProximityManager.StartSensor;
+end;
+
+procedure TActivitySensor.btnPararClick(Sender: TObject);
+begin
+  // Para o monitoramento do sensor de proximidade
+  FProximityManager.StopSensor;
+end;
+
+procedure TActivitySensor.FormCreate(Sender: TObject);
+begin
+  // Inicializa o TSensorProximityManager com a ListBox e o método de atualização
+  FProximityManager := TSensorProximityManager.Create(ListBoxHistory, UpdateProximityStatus);
+end;
+
+procedure TActivitySensor.FormDestroy(Sender: TObject);
+begin
+  FProximityManager.Free;
+end;
+
+procedure TActivitySensor.UpdateProximityStatus(const Status: string);
+begin
+  // Atualiza o LabelStatus com o status atual do sensor
+  LabelStatus.Text := 'Status: ' + Status;
+end;
 
 end.
