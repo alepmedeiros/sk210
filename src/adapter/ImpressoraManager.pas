@@ -3,225 +3,98 @@ unit ImpressoraManager;
 interface
 
 uses
-  Androidapi.JNI.JavaTypes,
-  Androidapi.Helpers,
-  FMX.Dialogs,
-  DeviceServiceManager,
-  sk210.bridge.topwise.cloudpos,
-  Androidapi.JNI.GraphicsContentViewText, Androidapi.JNIBridge,
-  Androidapi.JNI.Os;
+  sk210.bridge.topwise.AidlPrinter, // Tipos Java
+  Androidapi.JNIBridge, // JNI para comunicação com o Android
+  Androidapi.Helpers, // Ajuda na conversão entre tipos
+  Androidapi.JNI.GraphicsContentViewText, // Manipulação de gráficos
+  sk210.utils.enums;
 
 type
-  // Gerenciador de impressora sem callbacks
-  TImpressoraManager = class
+  TPrinterHelper = class
   private
-    FContext: JContext;
-    FDeviceServiceManager: TDeviceServiceManager;
-    FPrinterService: JAidlPrinter;
-    procedure VerificarServicoDeImpressao;
+    FPrinter: JAidlPrinter;
+    procedure InitializePrinter;
   public
-    constructor Create(AContext: JContext;
-      ADeviceServiceManager: TDeviceServiceManager);
-    procedure ImprimirTexto(const ATexto: string);
-    procedure TestarImpressaoUsandoProxy(const ATexto: string);
-  end;
-
-  TPrinterListener = class(TJavaLocal, JAidlPrinterListener)
-  private
-    FPrinterService: JAidlPrinter; // Armazena a referência ao serviço de impressão
-  public
-    constructor Create(APrinterService: JAidlPrinter); // Construtor modificado
-    procedure onPrintFinish; cdecl;
-    procedure onError(i: Integer); cdecl;
-    function asBinder: JIBinder; cdecl;  // Implementação obrigatória de asBinder
+    constructor Create;
+    procedure ImprimirTexto(const Texto: string; Alinhamento: TAlinhamento);
   end;
 
 implementation
 
 uses
-  System.Types,
-  DelphiZXingQRCode,
-  FMX.Graphics,
-  System.UITypes,
-  FMX.Types,
+  DeviceServiceManager,
+  sk210.bridge.topwise.TextUnit,
   System.SysUtils,
-  Math,
-  FMX.Objects,
-  System.Math.Vectors;
+  Androidapi.JNI.JavaTypes,
+  FMX.Dialogs,
+  Androidapi.JNI.Os, AidlPrinterListenerProxy;
 
-{ TImpressoraManager }
+{ TPrinterHelper }
 
-constructor TImpressoraManager.Create(AContext: JContext;
-  ADeviceServiceManager: TDeviceServiceManager);
+constructor TPrinterHelper.Create;
 begin
-  inherited Create;
-  FContext := AContext;
-  FDeviceServiceManager := ADeviceServiceManager;
+  inherited;
+  InitializePrinter;
 end;
 
-procedure TImpressoraManager.VerificarServicoDeImpressao;
-var
-  DeviceService: JAidlDeviceService;
+procedure TPrinterHelper.InitializePrinter;
 begin
-  if not FDeviceServiceManager.IsBind then
+  // Obtém a instância do serviço de impressão (aqui presumimos que o DeviceServiceManager está inicializado)
+  FPrinter := TDeviceServiceManager.GetInstance.GetPrintManager;
+end;
+
+function AidlPrinterListenerAsInterface(Remote: JIBinder): JAidlPrinterListener;
+var
+  Local: IInterface;
+begin
+  if Remote = nil then
+    Exit(nil);
+
+  // Verifica se o IBinder tem uma interface local
+  Local := Remote.queryLocalInterface(StringToJString('com.topwise.cloudpos.aidl.printer.AidlPrinterListener'));
+
+  // Usa Supports para verificar se Local implementa JAidlPrinterListener
+  if Supports(Local, JAidlPrinterListener, Result) then
+    Exit(Result)  // Se Local suporta JAidlPrinterListener, retorna Result
+  else
+    Result := TAidlPrinterListenerProxy.Create(Remote) as JAidlPrinterListener;  // Cria uma proxy para o IBinder remoto
+end;
+
+
+
+procedure TPrinterHelper.ImprimirTexto(const Texto: string;
+  Alinhamento: TAlinhamento);
+var
+  TextList: JArrayList;
+  JListText: JList;
+  JTexto: JString;
+  PrintCuttingMode: JPrintCuttingMode;
+begin
+  // Verifique se o serviço de impressão está conectado
+  if FPrinter = nil then
   begin
-    ShowMessage('Serviço de impressão não está vinculado.');
+    ShowMessage('Serviço de impressão não está conectado.');
     Exit;
   end;
 
-  DeviceService := FDeviceServiceManager.GetDeviceService;
+  // Converter o texto para JString
+  JTexto := StringToJString(Texto);
 
-  if not Assigned(DeviceService) then
-  begin
-    ShowMessage('Serviço de impressão não está disponível.');
-    Exit;
-  end;
+  // Criar a JArrayList para o texto a ser impresso
+  TextList := TJArrayList.Create;
+  TextList.add(JTexto);
 
-  FPrinterService := TJAidlPrinter_Stub.JavaClass.asInterface
-    (DeviceService.getPrinter);
+  // Fazer o cast explícito para JList
+  JListText := TJList.Wrap((TextList as ILocalObject).GetObjectID);
 
-  if not Assigned(FPrinterService) then
-    ShowMessage('Falha ao inicializar o serviço de impressão.');
-end;
+  // Enviar o comando de impressão diretamente (sem listener)
+  FPrinter.printText(JListText, nil);  // Segundo parâmetro é nil, sem listener
 
-procedure TImpressoraManager.ImprimirTexto(const ATexto: string);
-var
-  Template: JPrintTemplate;
-  PrinterState: Integer;
-  PrinterListener: TPrinterListener;
-  AidlPrinter: JAidlPrinter;
+  // Enviar o comando de corte de papel após a impressão
+  PrintCuttingMode := TJPrintCuttingMode.JavaClass.CUTTING_MODE_FULL;  // Corte completo
+  FPrinter.cuttingPaper(PrintCuttingMode);  // Envia o comando de corte de papel
 
-  //teste
-  PrinterProxy: JAidlPrinter_Stub_Proxy;
-begin
-  FDeviceServiceManager.BindDeviceService(FContext,
-    procedure
-    begin
-      VerificarServicoDeImpressao;
-
-      if not Assigned(FPrinterService) then
-      begin
-        ShowMessage('Serviço de impressão não disponível.');
-        Exit;
-      end;
-
-      try
-        Template := TJPrintTemplate.JavaClass.getInstance;
-        Template.init(FContext);
-        Template.Clear;
-
-        // Adiciona o texto ao template de impressão
-        Template.add(TJTextUnit.JavaClass.init(StringToJString(#13#10), 60, TJAlign.JavaClass.CENTER));  // Linha em branco
-        Template.add(TJTextUnit.JavaClass.init(StringToJString(ATexto), 30, TJAlign.JavaClass.CENTER));  // Texto principal
-        Template.add(TJTextUnit.JavaClass.init(StringToJString(#13#10), 60, TJAlign.JavaClass.CENTER));  // Linha em branco
-
-        // Gera o bitmap a partir do template
-        if Template.getPrintBitmap = nil then
-        begin
-          ShowMessage('Erro ao gerar bitmap de impressão.');
-          Exit;
-        end;
-
-        // Adiciona o bitmap rotacionado à fila de impressão
-        FPrinterService.addRuiImage(Template.getPrintBitmap, 180);
-
-        // Cria o listener para a impressão e passa o FPrinterService
-//        PrinterListener := TPrinterListener.Create(FPrinterService);
-
-        // Executa a fila de impressão
-//        FPrinterService.printRuiQueue(TJAidlPrinterListener.Wrap((PrinterListener as ILocalObject).GetObjectID));
-        FPrinterService.printRuiQueue(nil);
-
-        // corte do papel
-        FPrinterService.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
-      except
-        on E: Exception do
-          ShowMessage('Erro ao imprimir: ' + E.Message);
-      end;
-    end);
-end;
-
-procedure TImpressoraManager.TestarImpressaoUsandoProxy(const ATexto: string);
-var
-  Template: JPrintTemplate;
-  PrinterProxy: JAidlPrinter_Stub_Proxy;
-begin
-  FDeviceServiceManager.BindDeviceService(FContext,
-    procedure
-    begin
-      VerificarServicoDeImpressao;
-
-      if not Assigned(FPrinterService) then
-      begin
-        ShowMessage('Serviço de impressão não disponível.');
-        Exit;
-      end;
-
-      try
-        // Inicializando o proxy diretamente
-        PrinterProxy := TJAidlPrinter_Stub_Proxy.Wrap((FPrinterService as ILocalObject).GetObjectID);
-
-        // Criar o template de impressão
-        Template := TJPrintTemplate.JavaClass.getInstance;
-        Template.init(FContext);
-        Template.Clear;
-
-        // Adicionar texto ao template (podemos testar diferentes tamanhos e alinhamentos)
-        Template.add(TJTextUnit.JavaClass.init(StringToJString(#13#10), 60, TJAlign.JavaClass.CENTER));  // Linha em branco
-        Template.add(TJTextUnit.JavaClass.init(StringToJString(ATexto), 30, TJAlign.JavaClass.CENTER));  // Texto principal
-        Template.add(TJTextUnit.JavaClass.init(StringToJString(#13#10), 60, TJAlign.JavaClass.CENTER));  // Linha em branco
-
-        // Gerar o bitmap a partir do template
-        if Template.getPrintBitmap = nil then
-        begin
-          ShowMessage('Erro ao gerar bitmap de impressão.');
-          Exit;
-        end;
-
-        // Adiciona o bitmap rotacionado à fila de impressão através do proxy
-        PrinterProxy.addRuiImage(Template.getPrintBitmap, 180);
-
-        // Envia a fila de impressão sem o uso de um listener (usando o proxy)
-        PrinterProxy.printRuiQueue(nil);
-
-        // Corta o papel diretamente após a impressão
-        PrinterProxy.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
-
-      except
-        on E: Exception do
-          ShowMessage('Erro ao imprimir: ' + E.Message);
-      end;
-    end);
-end;
-
-
-{ TPrinterListener }
-
-
-function TPrinterListener.asBinder: JIBinder;
-begin
-   // Obtenha o identificador JNI do objeto atual e retorne como JIBinder
-  Result := TJIBinder.Wrap((Self as ILocalObject).GetObjectID);
-end;
-
-constructor TPrinterListener.Create(APrinterService: JAidlPrinter);
-begin
-  inherited Create;
-  FPrinterService := APrinterService; // Armazena a referência ao serviço de impressão
-end;
-
-procedure TPrinterListener.onError(i: Integer);
-begin
- ShowMessage('Erro ao imprimir: ' + IntToStr(i));
-end;
-
-procedure TPrinterListener.onPrintFinish;
-begin
-  ShowMessage('Impressão concluída com sucesso.');
-
-  // Corta o papel após a impressão ser concluída
-  if Assigned(FPrinterService) then
-    FPrinterService.cuttingPaper(TJPrintCuttingMode.JavaClass.CUTTING_MODE_HALT);
+  ShowMessage('Impressão enviada e corte de papel realizado.');
 end;
 
 end.

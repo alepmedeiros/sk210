@@ -109,7 +109,7 @@ end;
 
 procedure TActivityMain.itemtefClick(Sender: TObject);
 begin
-  ShowMessage('Usando tef');
+  ShowMessage('Implementar a chamada do TEF via SDK');
 end;
 
 end.

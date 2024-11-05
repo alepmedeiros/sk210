@@ -1,0 +1,75 @@
+unit activity_camera;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Types,
+  System.UITypes,
+  System.Classes,
+  System.Variants,
+  FMX.Types,
+  FMX.Controls,
+  FMX.Forms,
+  FMX.Graphics,
+  FMX.Dialogs,
+  FMX.StdCtrls,
+  FMX.Controls.Presentation,
+  FMX.Edit,
+  FMX.Objects,
+  FMX.Layouts,
+  Androidapi.JNI.JavaTypes,
+  CameraManager, FMX.Memo.Types, FMX.ScrollBox, FMX.Memo;
+
+type
+  TActivityCamera = class(TForm)
+    Layout1: TLayout;
+    Rectangle1: TRectangle;
+    Layout2: TLayout;
+    btnImpTexto: TButton;
+    Memo1: TMemo;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure btnImpTextoClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    FCameraManager: TCameraManager;
+    procedure DisplayScanResult(const Result: string);
+  end;
+
+var
+  ActivityCamera: TActivityCamera;
+
+implementation
+
+uses
+  sk210.bridge.topwise.AidlCameraScanCode, DeviceServiceManager;
+
+{$R *.fmx}
+
+procedure TActivityCamera.btnImpTextoClick(Sender: TObject);
+begin
+  FCameraManager.StartScan;
+end;
+
+procedure TActivityCamera.DisplayScanResult(const Result: string);
+begin
+  Memo1.Lines.Add('Resultado do escaneamento: ' + Result);
+end;
+
+procedure TActivityCamera.FormCreate(Sender: TObject);
+begin
+  // Obtém o serviço de câmera do DeviceServiceManager e inicializa TCameraManager
+  FCameraManager := TCameraManager.Create(
+    TDeviceServiceManager.GetInstance.GetCameraManager,
+    DisplayScanResult // Passa o callback para exibir o resultado no Memo
+  );
+end;
+
+procedure TActivityCamera.FormDestroy(Sender: TObject);
+begin
+  FCameraManager.Free;
+end;
+
+end.

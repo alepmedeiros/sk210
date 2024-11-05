@@ -1,0 +1,95 @@
+unit DeviceServiceManager;
+
+interface
+
+uses
+  sk210.bridge.topwise.AidlDeviceService, // Interface para o serviço de dispositivos
+  sk210.bridge.topwise.AidlPrinter,       // Interface para impressoras
+  sk210.bridge.topwise.AidlCameraScanCode,// Interface para o scanner
+  sk210.bridge.topwise.AidlSystem,        // Interface para funções de sistema
+  Androidapi.JNI.JavaTypes,
+  Androidapi.Helpers,
+  Androidapi.JNI.GraphicsContentViewText;
+
+type
+  TDeviceServiceManager = class
+  private
+    FDeviceService: JAidlDeviceService;
+    FPrinter: JAidlPrinter;
+    FCamera: JAidlCameraScanCode;
+    class var FInstance: TDeviceServiceManager;
+    procedure BindDeviceService;
+  public
+    constructor Create; // Construtor público apenas para a instância singleton
+    destructor Destroy; override;
+    class function GetInstance: TDeviceServiceManager;
+    function GetPrinterManager: JAidlPrinter;
+    function GetCameraManager: JAidlCameraScanCode;
+  end;
+
+implementation
+
+uses
+  Androidapi.JNI.Os;
+
+constructor TDeviceServiceManager.Create;
+begin
+  // Vincula ao serviço de dispositivos
+  BindDeviceService;
+end;
+
+destructor TDeviceServiceManager.Destroy;
+begin
+
+  inherited;
+end;
+
+procedure TDeviceServiceManager.BindDeviceService;
+var
+  Intent: JIntent;
+begin
+  Intent := TJIntent.JavaClass.init;
+  Intent.setAction(StringToJString('topwise_cloudpos_device_service'));
+  Intent.setClassName(StringToJString('com.android.topwise.topusdkservice'),
+    StringToJString('com.android.topwise.topusdkservice.service.DeviceService'));
+
+  TAndroidHelper.Context.bindService(Intent, nil, TJContext.JavaClass.BIND_AUTO_CREATE);
+end;
+
+function TDeviceServiceManager.GetPrinterManager: JAidlPrinter;
+var
+  Binder: JIBinder;
+begin
+  Result := nil; // Inicializando o retorno como nil
+  if FDeviceService <> nil then
+  begin
+    Binder := FDeviceService.getPrinter;  // Obtém o IBinder
+    if Binder <> nil then
+      Result := TJObject.Wrap(Binder) as JAidlPrinter;  // Converte o IBinder para a interface JAidlPrinter
+  end;
+end;
+
+function TDeviceServiceManager.GetCameraManager: JAidlCameraScanCode;
+var
+  Binder: JIBinder;
+begin
+  Result := nil; // Inicializando o retorno como nil
+  if FDeviceService <> nil then
+  begin
+    Binder := FDeviceService.getCameraManager;  // Obtém o IBinder
+    if Binder <> nil then
+      Result := TJObject.Wrap(Binder) as JAidlCameraScanCode;  // Converte o IBinder para a interface JAidlCameraScanCode
+  end;
+end;
+
+class function TDeviceServiceManager.GetInstance: TDeviceServiceManager;
+begin
+  // Verifica se a instância já existe. Se não, cria uma nova.
+  if FInstance = nil then
+  begin
+    FInstance := TDeviceServiceManager.Create;
+  end;
+  Result := FInstance;
+end;
+
+end.

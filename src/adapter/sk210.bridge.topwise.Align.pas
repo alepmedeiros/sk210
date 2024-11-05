@@ -1,0 +1,45 @@
+unit sk210.bridge.topwise.Align;
+
+interface
+
+uses
+  Androidapi.JNIBridge,
+  Androidapi.JNI.JavaTypes;
+
+type
+// ===== Forward declarations =====
+
+  JAlign = interface;//com.topwise.cloudpos.aidl.printer.Align
+
+// ===== Interface declarations =====
+
+  JAlignClass = interface(JEnumClass)
+    ['{66A0B508-E708-4DED-AE6F-378AB922AD4D}']
+    {class} function _GetCENTER: JAlign; cdecl;
+    {class} function _GetLEFT: JAlign; cdecl;
+    {class} function _GetRIGHT: JAlign; cdecl;
+    {class} function valueOf(string_: JString): JAlign; cdecl;
+    {class} function values: TJavaObjectArray<JAlign>; cdecl;//Deprecated
+    {class} property CENTER: JAlign read _GetCENTER;
+    {class} property LEFT: JAlign read _GetLEFT;
+    {class} property RIGHT: JAlign read _GetRIGHT;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/printer/Align')]
+  JAlign = interface(JEnum)
+    ['{21D781AE-BA63-40E2-A792-4F19ABD644BE}']
+    function getValue: Integer; cdecl;
+  end;
+  TJAlign = class(TJavaGenericImport<JAlignClass, JAlign>) end;
+
+implementation
+
+procedure RegisterTypes;
+begin
+  TRegTypes.RegisterType('sk210.bridge.topwise.Align.JAlign', TypeInfo(sk210.bridge.topwise.Align.JAlign));
+end;
+
+initialization
+  RegisterTypes;
+end.
+

@@ -1,0 +1,119 @@
+unit CameraManager;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Androidapi.JNI.JavaTypes, Androidapi.JNIBridge,
+  Androidapi.Helpers, Androidapi.JNI.GraphicsContentViewText, FMX.Dialogs,
+  sk210.bridge.topwise.AidlCameraScanCode, Androidapi.JNI.Os;
+
+type
+  // Define o tipo de callback como um método de objeto
+  TCameraResultEvent = procedure(const Result: string) of object;
+
+  TCameraManager = class
+  private
+    FDecodeManager: JAidlCameraScanCode;
+    FIsDecoding: Boolean;
+    FOnResult: TCameraResultEvent; // Callback para exibir o resultado no formulário
+    procedure HandleDecodeResult(const Result: string);
+  public
+    constructor Create(ADeviceService: JAidlCameraScanCode; AOnResult: TCameraResultEvent);
+    procedure StartScan;
+    procedure StopScan;
+  end;
+
+  TDecodeCallbackListener = class(TJavaLocal, JAidlDecodeCallBack)
+  private
+    FCameraManager: TCameraManager;
+  public
+    constructor Create(ACameraManager: TCameraManager);
+    procedure onResult(string_: JString); cdecl;
+    procedure onError(i: Integer); cdecl;
+    function asBinder: JIBinder; cdecl;
+  end;
+
+implementation
+
+{ TCameraManager }
+
+constructor TCameraManager.Create(ADeviceService: JAidlCameraScanCode; AOnResult: TCameraResultEvent);
+begin
+  inherited Create;
+  FDecodeManager := ADeviceService;
+  FOnResult := AOnResult;
+  FIsDecoding := False;
+end;
+
+procedure TCameraManager.StartScan;
+var
+  DecodeParams: JDecodeParameter;
+  DecodeCallback: TDecodeCallbackListener;
+begin
+  if not FIsDecoding then
+  begin
+    if not Assigned(FDecodeManager) then
+    begin
+      ShowMessage('Serviço de câmera não disponível.');
+      Exit;
+    end;
+
+    // Configura os parâmetros de decodificação
+    DecodeParams := TJDecodeParameter.Create;
+    DecodeParams.setDecodeMode(TJDecodeMode.JavaClass.MODE_SINGLE_SCAN_CODE);
+    DecodeParams.setFlashLightTimeout($FFFFFFFF);
+
+    // Cria o callback do escaneamento
+    DecodeCallback := TDecodeCallbackListener.Create(Self);
+
+    try
+      // Inicia o processo de escaneamento
+      FDecodeManager.startDecode(DecodeParams, DecodeCallback);
+      FIsDecoding := True;
+    except
+      on E: Exception do
+        ShowMessage('Erro ao iniciar o escaneamento: ' + E.Message);
+    end;
+  end;
+end;
+
+procedure TCameraManager.StopScan;
+begin
+  if Assigned(FDecodeManager) and FIsDecoding then
+  begin
+    FDecodeManager.stopDecode;
+    FIsDecoding := False;
+  end;
+end;
+
+procedure TCameraManager.HandleDecodeResult(const Result: string);
+begin
+  if Assigned(FOnResult) then
+    FOnResult(Result);
+end;
+
+{ TDecodeCallbackListener }
+
+constructor TDecodeCallbackListener.Create(ACameraManager: TCameraManager);
+begin
+  inherited Create;
+  FCameraManager := ACameraManager;
+end;
+
+procedure TDecodeCallbackListener.onResult(string_: JString);
+begin
+  FCameraManager.HandleDecodeResult(JStringToString(string_));
+end;
+
+procedure TDecodeCallbackListener.onError(i: Integer);
+begin
+  ShowMessage('Erro no escaneamento: ' + IntToStr(i));
+end;
+
+function TDecodeCallbackListener.asBinder: JIBinder;
+begin
+  Result := nil;
+end;
+
+end.
+

@@ -1,0 +1,31 @@
+program sk210;
+
+{$R *.dres}
+
+uses
+  System.StartUpCopy,
+  FMX.Forms,
+  sk210.utils in 'src\utils\sk210.utils.pas',
+  activity_impressao in 'src\res\layout\activity_impressao.pas' {ActivityImpressao},
+  activity_main in 'src\res\layout\activity_main.pas' {ActivityMain},
+  sk210.adpter.interfaces in 'src\adapter\sk210.adpter.interfaces.pas',
+  sk210.utils.enums in 'src\utils\sk210.utils.enums.pas',
+  sk210.bridge.topwise.AidlDeviceService in 'src\adapter\sk210.bridge.topwise.AidlDeviceService.pas',
+  sk210.bridge.topwise.AidlCameraScanCode in 'src\adapter\sk210.bridge.topwise.AidlCameraScanCode.pas',
+  sk210.bridge.topwise.AidlPrinter in 'src\adapter\sk210.bridge.topwise.AidlPrinter.pas',
+  sk210.bridge.topwise.AidlSystem in 'src\adapter\sk210.bridge.topwise.AidlSystem.pas',
+  DeviceServiceManager in 'src\utils\DeviceServiceManager.pas',
+  ImpressoraManager in 'src\adapter\ImpressoraManager.pas',
+  sk210.bridge.topwise.ImageUnit in 'src\adapter\sk210.bridge.topwise.ImageUnit.pas',
+  sk210.bridge.topwise.TextUnit in 'src\adapter\sk210.bridge.topwise.TextUnit.pas',
+  sk210.bridge.topwise.Align in 'src\adapter\sk210.bridge.topwise.Align.pas',
+  sk210.bridge.topwise.AidlPrinterListener in 'src\adapter\sk210.bridge.topwise.AidlPrinterListener.pas',
+  AidlPrinterListenerProxy in 'src\adapter\AidlPrinterListenerProxy.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.CreateForm(TActivityMain, ActivityMain);
+  Application.Run;
+end.

@@ -1,0 +1,74 @@
+unit ImpressoraManager;
+
+interface
+
+uses
+  sk210.bridge.topwise.AidlPrinter,           // Tipos Java
+  Androidapi.JNIBridge,               // JNI para comunicação com o Android
+  Androidapi.Helpers,                 // Ajuda na conversão entre tipos
+  Androidapi.JNI.GraphicsContentViewText, // Manipulação de gráficos
+  sk210.utils.enums;
+
+type
+  TPrinterHelper = class
+  private
+    FPrinter: JAidlPrinter;
+    procedure InitializePrinter;
+  public
+    constructor Create;
+    procedure ImprimirTexto(const Texto: string; Alinhamento: TAlinhamento);
+  end;
+
+implementation
+
+uses
+  DeviceServiceManager,
+  sk210.bridge.topwise.TextUnit,
+  System.SysUtils, Androidapi.JNI.JavaTypes;
+
+
+{ TPrinterHelper }
+
+constructor TPrinterHelper.Create;
+begin
+  inherited;
+  InitializePrinter;
+end;
+
+procedure TPrinterHelper.InitializePrinter;
+begin
+  // Obtém a instância do serviço de impressão (aqui presumimos que o DeviceServiceManager está inicializado)
+  FPrinter := TDeviceServiceManager.GetInstance.GetPrinterManager;
+end;
+
+procedure TPrinterHelper.ImprimirTexto(const Texto: string; Alinhamento: TAlinhamento);
+var
+  TextList: JArrayList; // Criar uma JArrayList
+  JListText: JList;     // Para armazenar o cast para JList
+  JTexto: JString;
+  PrinterListener: JAidlPrinterListener;
+begin
+  if FPrinter <> nil then
+  begin
+    // Converter o texto para JString
+    JTexto := StringToJString(Texto);
+
+    // Criar a JArrayList para o texto a ser impresso
+    TextList := TJArrayList.Create;
+    TextList.add(JTexto);
+
+    // Fazer o cast explícito para JList
+    JListText := TJList.Wrap((TextList as ILocalObject).GetObjectID);
+
+    // Criar uma instância do Listener (opcional, pode ser nil)
+    PrinterListener := nil; // Ou implemente o listener se necessário
+
+    // Chamar o método printText com a lista de textos
+    FPrinter.printText(JListText, PrinterListener);
+  end
+  else
+    raise Exception.Create('Erro ao acessar a impressora');
+end;
+
+end.
+

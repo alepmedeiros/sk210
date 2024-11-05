@@ -1,0 +1,73 @@
+
+unit C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.ImageUnit;
+
+interface
+
+uses
+  Androidapi.JNIBridge,
+  Androidapi.JNI.GraphicsContentViewText,
+  Androidapi.JNI.JavaTypes;
+
+type
+// ===== Forward declarations =====
+
+  JAlign = interface;//com.topwise.cloudpos.aidl.printer.Align
+  JImageUnit = interface;//com.topwise.cloudpos.aidl.printer.ImageUnit
+
+// ===== Interface declarations =====
+
+  JAlignClass = interface(JEnumClass)
+    ['{959B34A5-A1CA-4C74-839A-77B4470CC726}']
+    {class} function _GetCENTER: JAlign; cdecl;
+    {class} function _GetLEFT: JAlign; cdecl;
+    {class} function _GetRIGHT: JAlign; cdecl;
+    {class} function valueOf(string_: JString): JAlign; cdecl;
+    {class} function values: TJavaObjectArray<JAlign>; cdecl;//Deprecated
+    {class} property CENTER: JAlign read _GetCENTER;
+    {class} property LEFT: JAlign read _GetLEFT;
+    {class} property RIGHT: JAlign read _GetRIGHT;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/printer/Align')]
+  JAlign = interface(JEnum)
+    ['{D2824287-2326-4CA6-B670-3B2CD85E942D}']
+    function getValue: Integer; cdecl;
+  end;
+  TJAlign = class(TJavaGenericImport<JAlignClass, JAlign>) end;
+
+  JImageUnitClass = interface(JObjectClass)
+    ['{932A01CA-F0AB-450F-B5EC-846E20AA6928}']
+    {class} function init(bitmap: JBitmap; i: Integer; i1: Integer): JImageUnit; cdecl; overload;
+    {class} function init(rect: JRect; bitmap: JBitmap; i: Integer; i1: Integer): JImageUnit; cdecl; overload;
+    {class} function init(align: JAlign; bitmap: JBitmap; i: Integer; i1: Integer): JImageUnit; cdecl; overload;
+    {class} function init(rect: JRect; align: JAlign; bitmap: JBitmap; i: Integer; i1: Integer): JImageUnit; cdecl; overload;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/printer/ImageUnit')]
+  JImageUnit = interface(JObject)
+    ['{E21177CC-EC41-47E9-8EAF-2682BE129688}']
+    procedure copyValue(imageUnit: JImageUnit); cdecl;
+    function getAlign: JAlign; cdecl;
+    function getHeight: Integer; cdecl;
+    function getImage: JBitmap; cdecl;
+    function getMargins: JRect; cdecl;
+    function getWidth: Integer; cdecl;
+    procedure setAlign(align: JAlign); cdecl;
+    procedure setHeight(i: Integer); cdecl;
+    procedure setImage(bitmap: JBitmap); cdecl;
+    procedure setWidth(i: Integer); cdecl;
+  end;
+  TJImageUnit = class(TJavaGenericImport<JImageUnitClass, JImageUnit>) end;
+
+implementation
+
+procedure RegisterTypes;
+begin
+  TRegTypes.RegisterType('C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.ImageUnit.JAlign', TypeInfo(C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.ImageUnit.JAlign));
+  TRegTypes.RegisterType('C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.ImageUnit.JImageUnit', TypeInfo(C:\repositorio\Mobile-Automation-Project\sk210\src\adapter\sk210.bridge.topwise.ImageUnit.JImageUnit));
+end;
+
+initialization
+  RegisterTypes;
+end.
+

@@ -1,5 +1,5 @@
 
-unit DeviceServiceManager;
+unit DeviceServiceManager_novo;
 
 interface
 

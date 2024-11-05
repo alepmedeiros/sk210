@@ -1,0 +1,31 @@
+unit sk210.utils.enums;
+
+interface
+
+uses
+  sk210.bridge.topwise.Align,
+Androidapi.Helpers;
+
+type
+  TAlinhamento = (ESQUERDA, DIRETA, CENTRALIZADO);
+
+function ConvertToJAlign(Align: TAlinhamento): JAlign;
+
+implementation
+
+// Função que converte o alinhamento Delphi para o tipo Java JAlign
+function ConvertToJAlign(Align: TAlinhamento): JAlign;
+begin
+  case Align of
+    ESQUERDA:
+      Result := TJAlign.JavaClass.valueOf(StringToJString('ALIGN_LEFT')); // Valor correspondente em Java
+    CENTRALIZADO:
+      Result := TJAlign.JavaClass.valueOf(StringToJString('ALIGN_CENTER'));
+    DIRETA:
+      Result := TJAlign.JavaClass.valueOf(StringToJString('ALIGN_RIGHT'));
+  else
+    Result := TJAlign.JavaClass.valueOf(StringToJString('ALIGN_CENTER')); // Padrão
+  end;
+end;
+
+end.

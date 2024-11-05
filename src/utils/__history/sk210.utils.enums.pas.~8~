@@ -1,0 +1,26 @@
+unit sk210.utils.enums;
+
+interface
+
+uses
+  System.TypInfo,
+  sk210.bridge.topwise.TextUnit,
+  Androidapi.Helpers;
+
+type
+  TAlinhamento = (ESQUERDA, DIRETA, CENTRALIZADO);
+
+  TAlinhamentoHelper = record helper for TAlinhamento
+    function ToString: String;
+  end;
+
+implementation
+
+{ TAlinhamentoHelper }
+
+function TAlinhamentoHelper.ToString: String;
+begin
+  Result := GetEnumName(TypeInfo(TAlinhamento), Integer(Self));
+end;
+
+end.

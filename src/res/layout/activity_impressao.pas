@@ -18,8 +18,7 @@ uses
   FMX.Controls.Presentation,
   FMX.Edit,
   FMX.Layouts,
-  Androidapi.Helpers,
-  ImpressoraManager, DeviceServiceManager;
+  Androidapi.Helpers;
 
 type
   TActivityImpressao = class(TForm)
@@ -32,12 +31,9 @@ type
     btnImpQR: TButton;
     btnImpFrase: TButton;
     btnImpImagem: TButton;
-    procedure FormCreate(Sender: TObject);
     procedure btnImpTextoClick(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
   private
-    FImpressoraManager: TImpressoraManager;
-    FDeviceServiceManager: TDeviceServiceManager;
+
   public
 
   end;
@@ -48,27 +44,14 @@ var
 implementation
 
 uses
-  Androidapi.JNI.GraphicsContentViewText;
+  Androidapi.JNI.GraphicsContentViewText, ImpressoraManager, sk210.utils.enums;
 
 {$R *.fmx}
 
 procedure TActivityImpressao.btnImpTextoClick(Sender: TObject);
 begin
-//  FImpressoraManager.ImprimirTexto('Texto de exemplo para impressão');
-  FImpressoraManager.TestarImpressaoUsandoProxy('Texto de exemplo para impressão');
-end;
-
-procedure TActivityImpressao.FormCreate(Sender: TObject);
-begin
-  // Inicializa o gerenciador do serviço de dispositivo
-  FDeviceServiceManager := TDeviceServiceManager.GetInstance;
-
-  FImpressoraManager := TImpressoraManager.Create(TAndroidHelper.Context, FDeviceServiceManager);
-end;
-
-procedure TActivityImpressao.FormDestroy(Sender: TObject);
-begin
-  FImpressoraManager.Free;
+  var lPrint := TPrinterHelper.Create;
+  lPrint.ImprimirTexto('Teste de impressão', CENTRALIZADO);
 end;
 
 end.

@@ -1,0 +1,75 @@
+unit AidlPrinterListenerProxy;
+
+interface
+
+uses
+  Androidapi.JNIBridge,
+  Androidapi.JNI.JavaTypes,
+  Androidapi.JNI.Os,
+  sk210.bridge.topwise.AidlPrinterListener; // Importa a interface gerada
+
+type
+  TAidlPrinterListenerProxy = class(TJavaLocal, JAidlPrinterListener)
+  private
+    FRemote: JIBinder;
+  public
+    constructor Create(ARemote: JIBinder);
+
+    // Implementação dos métodos da interface JAidlPrinterListener
+    procedure onError(i: Integer); cdecl;
+    procedure onPrintFinish; cdecl;
+
+    // Método que permite retornar o IBinder remoto
+    function asBinder: JIBinder; cdecl;
+  end;
+
+  // Função que converte um IBinder para a interface JAidlPrinterListener
+  function AidlPrinterListenerAsInterface(Remote: JIBinder): JAidlPrinterListener;
+
+implementation
+
+uses
+  Androidapi.Helpers, Androidapi.JNI, System.SysUtils, FMX.Dialogs;
+
+{ TAidlPrinterListenerProxy }
+
+constructor TAidlPrinterListenerProxy.Create(ARemote: JIBinder);
+begin
+  inherited Create;
+  FRemote := ARemote;
+end;
+
+procedure TAidlPrinterListenerProxy.onError(i: Integer);
+begin
+  // Implementar o tratamento de erro da impressão
+  ShowMessage('Erro de impressão: ' + IntToStr(i));
+end;
+
+procedure TAidlPrinterListenerProxy.onPrintFinish;
+begin
+  // Implementar a lógica para quando a impressão for finalizada
+  ShowMessage('Impressão finalizada.');
+end;
+
+function TAidlPrinterListenerProxy.asBinder: JIBinder;
+begin
+  Result := FRemote;
+end;
+
+function AidlPrinterListenerAsInterface(Remote: JIBinder): JAidlPrinterListener;
+var
+  Local: IInterface;
+begin
+  if Remote = nil then
+    Exit(nil);
+
+  // Verifica se o IBinder tem uma interface local
+  Local := Remote.queryLocalInterface(StringToJString('com.topwise.cloudpos.aidl.printer.AidlPrinterListener'));
+  if Local <> nil then
+    Result := TJObject.Wrap(Local as ILocalObject).GetObjectID as JAidlPrinterListener
+  else
+    Result := TAidlPrinterListenerProxy.Create(Remote) as JAidlPrinterListener;
+end;
+
+end.
+

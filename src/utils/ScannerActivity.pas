@@ -1,0 +1,128 @@
+unit ScannerActivity;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, System.UITypes, FMX.Types, FMX.Controls, FMX.Forms, FMX.StdCtrls,
+  Androidapi.Helpers, Androidapi.JNI.GraphicsContentViewText, Androidapi.JNI.JavaTypes,
+  sk210.bridge.topwise.AidlCameraScanCode, sk210.bridge.topwise.AidlSystem,
+  FMX.Dialogs, Androidapi.JNIBridge, Androidapi.JNI.Os;
+
+type
+  TScannerActivity = class(TForm)
+    StartButton: TButton;
+    StopButton: TButton;
+    procedure StartButtonClick(Sender: TObject);
+    procedure StopButtonClick(Sender: TObject);
+  private
+    FDecodeManager: JAidlCameraScanCode;
+    FSystemService: JAidlSystem;
+    FIsDecoding: Boolean;
+    procedure StartDecode;
+    procedure StopDecode;
+    procedure HandleDecode(const Result: string);
+  end;
+
+  // Implementação do listener para capturar o resultado do escaneamento
+  TDecodeCallbackListener = class(TJavaLocal, JAidlDecodeCallBack)
+  private
+    FScannerActivity: TScannerActivity;
+  public
+    constructor Create(AScannerActivity: TScannerActivity);
+    procedure onResult(string_: JString); cdecl;
+    procedure onError(i: Integer); cdecl;
+    function asBinder: JIBinder; cdecl; // Implementação adicional para resolver o erro
+  end;
+
+implementation
+
+{$R *.fmx}
+
+uses
+  FMX.Platform.Android;
+
+{ TScannerActivity }
+
+procedure TScannerActivity.StartButtonClick(Sender: TObject);
+begin
+  StartDecode;
+end;
+
+procedure TScannerActivity.StopButtonClick(Sender: TObject);
+begin
+  StopDecode;
+end;
+
+procedure TScannerActivity.StartDecode;
+var
+  DecodeParams: JDecodeParameter;
+  DecodeCallback: TDecodeCallbackListener;
+begin
+  if not FIsDecoding then
+  begin
+    if not Assigned(FDecodeManager) then
+    begin
+      ShowMessage('Serviço de escaneamento não disponível.');
+      Exit;
+    end;
+
+    // Inicializa o parâmetro de decodificação
+    DecodeParams := TJDecodeParameter.Create;
+    DecodeParams.setDecodeMode(TJDecodeMode.JavaClass.MODE_SINGLE_SCAN_CODE);
+    DecodeParams.setFlashLightTimeout($FFFFFFFF); // Define o timeout para o flash
+
+    // Cria o callback para receber o resultado do escaneamento
+    DecodeCallback := TDecodeCallbackListener.Create(Self);
+
+    try
+      // Inicia o escaneamento
+      FDecodeManager.startDecode(DecodeParams, DecodeCallback);
+      FIsDecoding := True;
+    except
+      on E: Exception do
+        ShowMessage('Erro ao iniciar o escaneamento: ' + E.Message);
+    end;
+  end;
+end;
+
+procedure TScannerActivity.StopDecode;
+begin
+  if Assigned(FDecodeManager) and FIsDecoding then
+  begin
+    FDecodeManager.stopDecode;
+    FIsDecoding := False;
+  end;
+end;
+
+procedure TScannerActivity.HandleDecode(const Result: string);
+begin
+  // Lida com o resultado do escaneamento
+  ShowMessage('Resultado do escaneamento: ' + Result);
+end;
+
+{ TDecodeCallbackListener }
+
+constructor TDecodeCallbackListener.Create(AScannerActivity: TScannerActivity);
+begin
+  inherited Create;
+  FScannerActivity := AScannerActivity;
+end;
+
+function TDecodeCallbackListener.asBinder: JIBinder;
+begin
+  Result := nil;  // Retorna nil, pois não estamos usando o IBinder diretamente
+end;
+
+procedure TDecodeCallbackListener.onResult(string_: JString);
+begin
+  // Converte o JString para string Delphi e chama o método HandleDecode
+  FScannerActivity.HandleDecode(JStringToString(string_));
+end;
+
+procedure TDecodeCallbackListener.onError(i: Integer);
+begin
+  ShowMessage('Erro no escaneamento: ' + IntToStr(i));
+end;
+
+end.
+

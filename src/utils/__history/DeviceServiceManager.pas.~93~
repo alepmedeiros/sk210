@@ -1,0 +1,148 @@
+unit DeviceServiceManager;
+
+interface
+
+uses
+  sk210.bridge.topwise.AidlDeviceService,   // Interface para o serviço de dispositivos
+  sk210.bridge.topwise.AidlPrinter,         // Interface para impressoras
+  sk210.bridge.topwise.AidlCameraScanCode,  // Interface para o scanner
+  sk210.bridge.topwise.AidlSystem,          // Interface para funções de sistema
+  Androidapi.JNI.JavaTypes,
+  Androidapi.Helpers,
+  Androidapi.JNI.GraphicsContentViewText,
+  Androidapi.JNIBridge, Androidapi.JNI.Os;
+
+type
+  TDeviceServiceManager = class
+  private
+    FDeviceService: JAidlDeviceService;
+    FPrinter: JAidlPrinter;
+    FCamera: JAidlCameraScanCode;
+    FServiceConnection: JServiceConnection;
+    class var FInstance: TDeviceServiceManager;
+    procedure BindDeviceService;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    class function GetInstance: TDeviceServiceManager;
+    function GetPrinterManager: JAidlPrinter;
+    function GetCameraManager: JAidlCameraScanCode;
+  end;
+
+  TServiceConnection = class(TJavaLocal, JServiceConnection)
+  private
+    FManager: TDeviceServiceManager;
+  public
+    constructor Create(AManager: TDeviceServiceManager);
+    procedure onServiceConnected(name: JComponentName; service: JIBinder); cdecl;
+    procedure onServiceDisconnected(name: JComponentName); cdecl;
+    procedure onBindingDied(name: JComponentName); cdecl;
+    procedure onNullBinding(name: JComponentName); cdecl;
+  end;
+
+implementation
+
+uses
+  System.SysUtils, FMX.Dialogs;
+
+{ TDeviceServiceManager }
+
+constructor TDeviceServiceManager.Create;
+begin
+  // Inicializa o ServiceConnection
+  FServiceConnection := TServiceConnection.Create(Self);
+
+  // Vincula ao serviço de dispositivos
+  BindDeviceService;
+end;
+
+destructor TDeviceServiceManager.Destroy;
+begin
+  // Desvincula o serviço quando a instância for destruída
+  if FDeviceService <> nil then
+    TAndroidHelper.Context.unbindService(FServiceConnection);
+
+  inherited;
+end;
+
+procedure TDeviceServiceManager.BindDeviceService;
+var
+  Intent: JIntent;
+begin
+  Intent := TJIntent.JavaClass.init;
+  Intent.setAction(StringToJString('topwise_cloudpos_device_service'));
+  Intent.setClassName(StringToJString('com.android.topwise.topusdkservice'),
+    StringToJString('com.android.topwise.topusdkservice.service.DeviceService'));
+
+  // Vincula ao serviço usando o ServiceConnection
+  if not TAndroidHelper.Context.bindService(Intent, FServiceConnection, TJContext.JavaClass.BIND_AUTO_CREATE) then
+    raise Exception.Create('Erro ao conectar ao serviço de impressão');
+end;
+
+function TDeviceServiceManager.GetPrinterManager: JAidlPrinter;
+begin
+  if FPrinter = nil then
+    raise Exception.Create('Serviço de impressão não está conectado.');
+  Result := FPrinter;
+end;
+
+function TDeviceServiceManager.GetCameraManager: JAidlCameraScanCode;
+begin
+  if FCamera = nil then
+    raise Exception.Create('Serviço de scanner não está conectado.');
+  Result := FCamera;
+end;
+
+class function TDeviceServiceManager.GetInstance: TDeviceServiceManager;
+begin
+  if FInstance = nil then
+    FInstance := TDeviceServiceManager.Create;
+  Result := FInstance;
+end;
+
+{ TServiceConnection }
+
+constructor TServiceConnection.Create(AManager: TDeviceServiceManager);
+begin
+  inherited Create;
+  FManager := AManager;
+end;
+
+procedure TServiceConnection.onBindingDied(name: JComponentName);
+begin
+ // Ocorre quando o serviço morre inesperadamente
+  FManager.FDeviceService := nil;
+  FManager.FPrinter := nil;
+  FManager.FCamera := nil;
+  ShowMessage('A conexão com o serviço morreu.');
+end;
+
+procedure TServiceConnection.onNullBinding(name: JComponentName);
+begin
+  // Ocorre quando o serviço foi vinculado, mas não está disponível
+  FManager.FDeviceService := nil;
+  ShowMessage('Serviço vinculado, mas não disponível.');
+end;
+
+procedure TServiceConnection.onServiceConnected(name: JComponentName; service: JIBinder);
+begin
+  // Converte o JIBinder para a interface JAidlDeviceService
+  FManager.FDeviceService := TJObject.Wrap(service) as JAidlDeviceService;
+
+  // Inicializa o FPrinter e FCamera após a conexão
+  FManager.FPrinter := FManager.FDeviceService.getPrinter;
+  FManager.FCamera := FManager.FDeviceService.getCameraManager;
+
+  ShowMessage('Serviço de dispositivos conectado.');
+end;
+
+procedure TServiceConnection.onServiceDisconnected(name: JComponentName);
+begin
+  FManager.FDeviceService := nil;
+  FManager.FPrinter := nil;
+  FManager.FCamera := nil;
+  ShowMessage('Serviço de dispositivos desconectado.');
+end;
+
+end.
+

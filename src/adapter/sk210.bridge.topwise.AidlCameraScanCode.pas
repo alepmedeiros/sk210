@@ -16,8 +16,31 @@ type
   JAidlDecodeCallBack = interface;//com.topwise.cloudpos.aidl.camera.AidlDecodeCallBack
   JDecodeMode = interface;//com.topwise.cloudpos.aidl.camera.DecodeMode
   JDecodeParameter = interface;//com.topwise.cloudpos.aidl.camera.DecodeParameter
+  JAidlCameraScanCode_Stub = interface;//com.topwise.cloudpos.aidl.camera.AidlCameraScanCode$Stub
 
 // ===== Interface declarations =====
+
+  JAidlCameraScanCode_StubClass = interface(JBinderClass)
+    ['{14DC882C-F18D-415D-BAE1-3ECE51D1DC42}']
+    {class} function _GetTRANSACTION_getDecodeLibVersion: Integer; cdecl;
+    {class} function _GetTRANSACTION_startDecode: Integer; cdecl;
+    {class} function _GetTRANSACTION_stopDecode: Integer; cdecl;
+    {class} function _GetTRANSACTION_stopScan: Integer; cdecl;
+    {class} function asInterface(iBinder: JIBinder): JAidlCameraScanCode; cdecl;
+    {class} function init: JAidlCameraScanCode_Stub; cdecl;
+    {class} property TRANSACTION_getDecodeLibVersion: Integer read _GetTRANSACTION_getDecodeLibVersion;
+    {class} property TRANSACTION_startDecode: Integer read _GetTRANSACTION_startDecode;
+    {class} property TRANSACTION_stopDecode: Integer read _GetTRANSACTION_stopDecode;
+    {class} property TRANSACTION_stopScan: Integer read _GetTRANSACTION_stopScan;
+  end;
+
+  [JavaSignature('com/topwise/cloudpos/aidl/camera/AidlCameraScanCode$Stub')]
+  JAidlCameraScanCode_Stub = interface(JBinder)
+    ['{54BDF0D4-3FD4-4C51-B4FD-58CA34592BE6}']
+    function asBinder: JIBinder; cdecl;
+    function onTransact(i: Integer; parcel: JParcel; parcel1: JParcel; i1: Integer): Boolean; cdecl;
+  end;
+  TJAidlCameraScanCode_Stub = class(TJavaGenericImport<JAidlCameraScanCode_StubClass, JAidlCameraScanCode_Stub>) end;
 
   JAidlCameraScanCodeClass = interface(JIInterfaceClass)
     ['{79DABF0F-691C-4800-84D3-00BA2F48CA89}']
